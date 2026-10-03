@@ -42,6 +42,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battlefield: {fileID: 11400000, guid: 0d81d54bae3a550fa95cde52d1c427ee, type: 2}
+  mae: {fileID: 11400000, guid: 9197dfd5707a51919b403b76bbc95422, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db078501d5a0594fb0f880e6eb227ee6, type: 3}
+  m_Name: Mae
+  m_EditorClassIdentifier:
+  id: sylvanna.mae
+  displayName: Mae
+  summonerClass: 1
+  startingHP: 100
+  startingLoadout:
+  - {fileID: 11400000, guid: 777867d398045020a79f748fd9bfd0b0, type: 2}

@@ -1,41 +1,24 @@
-# AetherWild
-GhostFrame Studios · Unity 6 · mobile-first landscape tactical artillery.
+# AetherWild — M1 combat foundation
+GhostFrame Studios · Unity **6000.0.60f1** · landscape tactical artillery.
 
-## Status
-M0 source foundation only. **Not yet Unity-compiled, cloud-built, or iPhone-validated.**
-M1 is gated on a successful M0 mobile pipeline test. Do not begin M2.
+Extends the user's validated M0 at main `826624a176972591ed8eff0871da814d9d46e42a`.
+M1 source is prepared; Unity compilation and iPhone runtime acceptance are pending.
 
-This repository is independent of Crownfall Arena; it contains no imported Crownfall code or assets.
+Open `Assets/AetherWild/Scenes/Foundation.unity`. Run `AetherWild > Run M1 checks`, then Play.
+Use the existing Cloud Build project, branch and pre-export method; do not create a new project.
 
-## Open and build
-- Editor: Unity **6000.0.60f1**, with WebGL Build Support.
-- Project root: repository root.
-- Scene: `Assets/AetherWild/Scenes/Foundation.unity`.
-- In the editor: `AetherWild > Configure M0 build`, open the scene, then Play.
-- Batch build: `Unity -batchmode -quit -projectPath <repo> -buildTarget WebGL -executeMethod AetherWild.Editor.BuildSetup.BuildWebGL -logFile <log>`.
-- Optional output override: `AETHERWILD_BUILD_PATH`.
+Implemented: player/AI turns, 30-second timer, retained M0 movement/hop, drag aiming,
+partial preview, separate FIRE, swept ballistic projectile collision, 100 HP / 20 damage,
+AI shot error, victory/defeat and page-reload-free REMATCH. Only Aether Bolt is functional.
 
-See [M0 build and acceptance](Docs/M0-ACCEPTANCE.md) for cloud configuration and required device checks.
+Both placeholders use Mae's shared Conduit definition, a loadout and an independent SigilDefinition.
+Finite-resource fields support later Sigils but do not regenerate. Resonance fields are metadata only:
+future eligibility requires >=75% class-aligned equipped Sigils (5/6 or 6/6), with no class restrictions.
+School enum XO represents X'O. No other Sigil or resonance behavior is implemented.
 
-## M0 scope
-One authored 64-column, half-unit Tilemap battlefield; replaceable mint/orange Mae placeholders;
-2D physics; fixed orthographic camera; safe-area HUD; left/right and small-hop touch controls.
-Desktop diagnostic controls: A/D or arrow keys, Space.
+M0 MovementController, HoldControl, TerrainSystem, authored battlefield and camera configuration
+are preserved. FoundationScene only wires combat/input gates/HUD into the existing scene.
+Boundary reset remains in place per the M1 request; terrain deformation is excluded.
 
-M0 movement is an unrestricted input diagnostic. Falling beyond the boundary resets the placeholder
-and increments a visible counter. M1 will introduce per-turn allowance, defeat, and the combat loop.
-No Sigils, damage, AI, terrain destruction, or match rules are claimed to be implemented yet.
-
-## Architecture
-- `BattlefieldDefinition`: authored map, spawns, boundary, movement values.
-- `TerrainSystem`: one Tilemap for occupancy, rendering and collider generation.
-- `MovementController`: Rigidbody2D movement independent of input and art.
-- `HoldControl`: multitouch-safe UI pointer state, cleared on exit/focus loss.
-- `FoundationScene`: M0 composition and diagnostic presentation; replaceable visual children.
-- `BuildSetup`: editor-only build settings and entry points. No WebGL branches in gameplay.
-
-M1 will add data-driven universal Sigil definitions/loadouts and only functional Aether Shot:
-Origin / Projectile / Expellant, 20 damage, small persistent terrain impact, unlimited uses.
-Any class may equip any Sigil; finite uses never regenerate through cooldowns.
-Classes: Embodiment, Conduit, Shaper, Manipulator, Expellant, Specialist.
-Resonance architecture must allow >=75% aligned loadout (5/6), without implementing a complex bonus.
+See [M1 acceptance and upload](Docs/M1-ACCEPTANCE.md) and [validation results](Docs/VALIDATION.md).
+The archived M0 acceptance document describes the earlier delivery state, not this milestone's status.

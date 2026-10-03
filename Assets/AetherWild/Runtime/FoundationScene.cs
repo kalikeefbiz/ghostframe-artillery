@@ -4,10 +4,15 @@ using UnityEngine.UI;
 
 namespace AetherWild
 {
-    // M0 composition root. No combat, match rules, or Summoner-specific abilities.
+    // Extends the validated M0 composition with independent combat and presentation components.
     public sealed class FoundationScene : MonoBehaviour
     {
         [SerializeField] private BattlefieldDefinition battlefield;
+        [SerializeField] private SummonerDefinition mae;
+        private MatchManager match;
+        private CombatHUD combatHUD;
+        private bool focused = true;
+        private bool paused;
         private MovementController player;
         private MovementController enemy;
         private HoldControl left;
@@ -49,6 +54,17 @@ namespace AetherWild
             player = CreateSummoner("Mae - player", battlefield.playerSpawn, new Color(0.42f, 0.8f, 0.68f));
             enemy = CreateSummoner("Mae - opponent", battlefield.enemySpawn, new Color(0.93f, 0.57f, 0.31f));
             BuildUI();
+            if (!mae || mae.startingLoadout == null || mae.startingLoadout.Length == 0)
+                throw new System.InvalidOperationException("Missing Mae/Sigil data.");
+            var playerCombat = player.gameObject.AddComponent<SummonerCombat>();
+            var enemyCombat = enemy.gameObject.AddComponent<SummonerCombat>();
+            playerCombat.Initialize(Side.Player, mae);
+            enemyCombat.Initialize(Side.Enemy, mae);
+            match = gameObject.AddComponent<MatchManager>();
+            match.Initialize(playerCombat, enemyCombat, battlefield, placeholder);
+            match.StateChanged += ClearInput;
+            combatHUD = gameObject.AddComponent<CombatHUD>();
+            combatHUD.Initialize(safeRoot, match, placeholder);
             RefreshViewport();
         }
 
@@ -90,7 +106,7 @@ namespace AetherWild
             left = Control("LEFT", new Vector2(0, 0), new Vector2(90, 76));
             right = Control("RIGHT", new Vector2(0, 0), new Vector2(230, 76));
             hop = Control("HOP", new Vector2(1, 0), new Vector2(-90, 76));
-            hop.Pressed = () => { if (landscape) player.RequestHop(); };
+            hop.Pressed = () => { if (landscape && match && match.PlayerCanAct) player.RequestHop(); };
         }
 
         private HoldControl Control(string label, Vector2 anchor, Vector2 position)
@@ -134,12 +150,18 @@ namespace AetherWild
                 RefreshViewport();
             float keyboard = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1 : 0)
                 - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
-            player.SetDirection(landscape ? Mathf.Clamp(keyboard + (right.Held ? 1 : 0) - (left.Held ? 1 : 0), -1, 1) : 0);
-            if (landscape && Input.GetKeyDown(KeyCode.Space)) player.RequestHop();
-            CheckBoundary(player, battlefield.playerSpawn);
-            CheckBoundary(enemy, battlefield.enemySpawn);
+            player.SetDirection(landscape && match.PlayerCanAct ? Mathf.Clamp(keyboard + (right.Held ? 1 : 0) - (left.Held ? 1 : 0), -1, 1) : 0);
+            if (landscape && match.PlayerCanAct && Input.GetKeyDown(KeyCode.Space)) player.RequestHop();
+            if (match.Turns.Phase != TurnPhase.Finished)
+            {
+                CheckBoundary(player, battlefield.playerSpawn);
+                CheckBoundary(enemy, battlefield.enemySpawn);
+            }
+            string turn = match.Turns.Phase == TurnPhase.Finished ? match.Result
+                : match.Turns.Phase == TurnPhase.Resolving ? "BOLT IN FLIGHT"
+                : match.Turns.ActiveSide == Side.Player ? "YOUR TURN" : "AI TURN";
             status.text = landscape
-                ? $"M0 INPUT TEST  |  Mint: player   Orange: opponent  |  Boundary resets: {resets}"
+                ? $"{turn}  |  {Mathf.CeilToInt(match.Turns.SecondsRemaining)}s  |  Turn {match.Turns.TurnNumber}"
                 : "Rotate your phone to landscape";
         }
 
@@ -149,7 +171,7 @@ namespace AetherWild
             float maxX = battlefield.origin.x + battlefield.heights.Length * battlefield.cellSize + 2;
             if (position.y < battlefield.killY || position.x < battlefield.origin.x - 2 || position.x > maxX)
             {
-                // M0 diagnostic reset only. M1 replaces this with MatchManager defeat.
+                // Preserve the validated boundary reset during M1, as requested.
                 summoner.ResetPosition(spawn);
                 resets++;
             }
@@ -165,6 +187,7 @@ namespace AetherWild
             safeRoot.anchorMax = new Vector2(lastSafe.xMax / lastWidth, lastSafe.yMax / lastHeight);
             safeRoot.offsetMin = safeRoot.offsetMax = Vector2.zero;
             arenaCamera.orthographicSize = Mathf.Max(10.5f, 18f / arenaCamera.aspect);
+            UpdateSuspension();
             ClearInput();
         }
 
@@ -174,11 +197,27 @@ namespace AetherWild
             if (right) right.Clear();
             if (hop) hop.Clear();
             if (player) player.ClearInput();
+            if (combatHUD && combatHUD.Aim) combatHUD.Aim.CancelDrag();
         }
-        private void OnApplicationFocus(bool focused) { if (!focused) ClearInput(); }
-        private void OnApplicationPause(bool paused) { if (paused) ClearInput(); }
+        private void UpdateSuspension()
+        {
+            if (match) match.Suspended = !landscape || !focused || paused;
+        }
+        private void OnApplicationFocus(bool value)
+        {
+            focused = value;
+            UpdateSuspension();
+            if (!value) ClearInput();
+        }
+        private void OnApplicationPause(bool value)
+        {
+            paused = value;
+            UpdateSuspension();
+            if (value) ClearInput();
+        }
         private void OnDestroy()
         {
+            if (match) match.StateChanged -= ClearInput;
             if (placeholder) Destroy(placeholder);
             if (texture) Destroy(texture);
             if (material) Destroy(material);

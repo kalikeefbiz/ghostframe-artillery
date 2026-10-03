@@ -11,12 +11,12 @@ namespace AetherWild.Editor
         private const string Scene = "Assets/AetherWild/Scenes/Foundation.unity";
         public int callbackOrder => -1000;
 
-        [MenuItem("AetherWild/Configure M0 build")]
+        [MenuItem("AetherWild/Configure build")]
         public static void Configure()
         {
             PlayerSettings.companyName = "GhostFrame Studios";
             PlayerSettings.productName = "AetherWild";
-            PlayerSettings.bundleVersion = "0.0.1";
+            PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
@@ -24,18 +24,24 @@ namespace AetherWild.Editor
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.defaultWebScreenWidth = 1280;
             PlayerSettings.defaultWebScreenHeight = 720;
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
             PlayerSettings.WebGL.decompressionFallback = true;
+            // Diagnostic compatibility build: avoid compressed-response/header dependencies.
+            // Current placeholders are runtime RGBA textures; no DXT/ASTC imports exist.
+            EditorUserBuildSettings.webGLBuildSubtarget = WebGLTextureSubtarget.Generic;
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { UnityEngine.Rendering.GraphicsDeviceType.OpenGLES3 });
             PlayerSettings.WebGL.template = "APPLICATION:Default";
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Scene, true) };
             AssetDatabase.SaveAssets();
+            CombatChecks.Run();
         }
 
         public void OnPreprocessBuild(BuildReport report)
         {
             Configure();
             if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(Scene))
-                throw new BuildFailedException("Missing M0 foundation scene.");
+                throw new BuildFailedException("Missing foundation scene.");
         }
 
         // Optional Build Automation pre-export hook; no Cloud-only types in gameplay.

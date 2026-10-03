@@ -1,0 +1,8 @@
+{
+  "Assets/AetherWild/Data/Battlefield.asset": "9f353debd41ceba8f5f05cf063b3671d79e635e35701e58447f42a9c06446eff",
+  "Assets/AetherWild/Runtime/BattlefieldDefinition.cs": "6573bcaf0c31163947dd8955c1bbd48da98b81f72d11510259f5ab45adea67be",
+  "Assets/AetherWild/Runtime/HoldControl.cs": "82211b64956745edc99076f370e9798d0a2ef7f0dc4a5128268d867a05bad46b",
+  "Assets/AetherWild/Runtime/MovementController.cs": "9dfac798631bd73baa1f046174a5809caf844b8f56266dcb78c506e75fc98978",
+  "Assets/AetherWild/Runtime/TerrainSystem.cs": "58ce75a3337ae1e24aa8183d4bc9e91aa3a96f52500645b8c82176bca78616d5",
+  "ProjectSettings/ProjectVersion.txt": "130c4cd3c0f81b504317de1afcc001feb9923e1136c9b373cd932971c5276587"
+}
