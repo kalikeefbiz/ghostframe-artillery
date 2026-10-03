@@ -1,0 +1,110 @@
+name: Unpack AetherWild M0 Source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Find source zip
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t matches < <(
+            find . -maxdepth 2 -type f \( \
+              -iname 'AetherWild-M0-source*.zip' -o \
+              -iname 'AetherWild*M0*.zip' \
+            \) -print
+          )
+
+          if [ "${#matches[@]}" -eq 0 ]; then
+            echo "ERROR: No AetherWild M0 source zip found."
+            exit 1
+          fi
+
+          if [ "${#matches[@]}" -gt 1 ]; then
+            echo "ERROR: Multiple candidate source zips found."
+            printf '%s\n' "${matches[@]}"
+            exit 1
+          fi
+
+          echo "path=${matches[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive="${{ steps.archive.outputs.path }}"
+          unzip -Z1 "$archive" > /tmp/contents.txt
+
+          grep -Fxq "ghostframe-artillery/Assets/AetherWild/Scenes/Foundation.unity" /tmp/contents.txt
+          grep -Fxq "ghostframe-artillery/Packages/manifest.json" /tmp/contents.txt
+          grep -Fxq "ghostframe-artillery/ProjectSettings/ProjectVersion.txt" /tmp/contents.txt
+
+          echo "Archive structure validated."
+
+      - name: Unpack Unity project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive="${{ steps.archive.outputs.path }}"
+
+          rm -rf /tmp/aetherwild_unpack
+          mkdir -p /tmp/aetherwild_unpack
+
+          unzip -q "$archive" -d /tmp/aetherwild_unpack
+
+          source_root="/tmp/aetherwild_unpack/ghostframe-artillery"
+
+          test -d "$source_root"
+
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            "$source_root/" ./
+
+          rm -f "$archive"
+
+      - name: Verify extracted project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f Assets/AetherWild/Scenes/Foundation.unity
+          test -f Packages/manifest.json
+          test -f ProjectSettings/ProjectVersion.txt
+
+          echo "AetherWild project successfully extracted."
+
+      - name: Commit project to main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Import AetherWild M0 Unity source"
+          git push origin main
