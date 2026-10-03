@@ -14,5 +14,11 @@ namespace AetherWild
         public float killY = -8;
         public float moveSpeed = 3;
         public float hopSpeed = 5;
+        public Vector2[] surface;
+        public int gridWidth = 192;
+        public int gridHeight = 128;
+        public Texture2D mapArt;
+        public Shader mapShader;
+        public float movementPerTurn = 5;
     }
 }

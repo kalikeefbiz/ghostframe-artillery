@@ -26,12 +26,11 @@ namespace AetherWild
         private PhysicsMaterial2D material;
         private Rect lastSafe;
         private int lastWidth, lastHeight;
-        private int resets;
         private bool landscape;
 
         private void Awake()
         {
-            if (!battlefield || battlefield.heights == null || battlefield.heights.Length == 0)
+            if (!battlefield || battlefield.surface == null || battlefield.surface.Length == 0)
                 throw new System.InvalidOperationException("Missing authored battlefield definition.");
             Application.targetFrameRate = 60;
             Screen.orientation = ScreenOrientation.AutoRotation;
@@ -99,14 +98,14 @@ namespace AetherWild
             scaler.matchWidthOrHeight = 1;
             safeRoot = new GameObject("Safe area", typeof(RectTransform)).GetComponent<RectTransform>();
             safeRoot.SetParent(canvas.transform, false);
-            var title = Label("AETHERWILD  /  GHOSTFRAME STUDIOS", safeRoot, 25);
+            var title = Label("AETHERWILD  /  THE WILDS — DEPTH 1", safeRoot, 25);
             Place(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -30), new Vector2(-32, 42));
             status = Label("", safeRoot, 22);
             Place(status.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -76), new Vector2(-32, 44));
-            left = Control("LEFT", new Vector2(0, 0), new Vector2(90, 76));
-            right = Control("RIGHT", new Vector2(0, 0), new Vector2(230, 76));
-            hop = Control("HOP", new Vector2(1, 0), new Vector2(-90, 76));
-            hop.Pressed = () => { if (landscape && match && match.PlayerCanAct) player.RequestHop(); };
+            left = Control("LEFT", new Vector2(0, 0), new Vector2(90, 150));
+            right = Control("RIGHT", new Vector2(0, 0), new Vector2(230, 150));
+            hop = Control("HOP", new Vector2(1, 0), new Vector2(-90, 150));
+            hop.Pressed = () => { if (landscape && match && match.HopAllowed()) player.RequestHop(); };
         }
 
         private HoldControl Control(string label, Vector2 anchor, Vector2 position)
@@ -150,13 +149,8 @@ namespace AetherWild
                 RefreshViewport();
             float keyboard = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1 : 0)
                 - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
-            player.SetDirection(landscape && match.PlayerCanAct ? Mathf.Clamp(keyboard + (right.Held ? 1 : 0) - (left.Held ? 1 : 0), -1, 1) : 0);
-            if (landscape && match.PlayerCanAct && Input.GetKeyDown(KeyCode.Space)) player.RequestHop();
-            if (match.Turns.Phase != TurnPhase.Finished)
-            {
-                CheckBoundary(player, battlefield.playerSpawn);
-                CheckBoundary(enemy, battlefield.enemySpawn);
-            }
+            player.SetDirection(landscape && match.PlayerCanMove ? Mathf.Clamp(keyboard + (right.Held ? 1 : 0) - (left.Held ? 1 : 0), -1, 1) : 0);
+            if (landscape && Input.GetKeyDown(KeyCode.Space) && match.HopAllowed()) player.RequestHop();
             string turn = match.Turns.Phase == TurnPhase.Finished ? match.Result
                 : match.Turns.Phase == TurnPhase.Resolving ? "BOLT IN FLIGHT"
                 : match.Turns.ActiveSide == Side.Player ? "YOUR TURN" : "AI TURN";
@@ -165,16 +159,14 @@ namespace AetherWild
                 : "Rotate your phone to landscape";
         }
 
-        private void CheckBoundary(MovementController summoner, Vector2 spawn)
+        private void LateUpdate()
         {
-            var position = summoner.transform.position;
-            float maxX = battlefield.origin.x + battlefield.heights.Length * battlefield.cellSize + 2;
-            if (position.y < battlefield.killY || position.x < battlefield.origin.x - 2 || position.x > maxX)
-            {
-                // Preserve the validated boundary reset during M1, as requested.
-                summoner.ResetPosition(spawn);
-                resets++;
-            }
+            if(!player || !enemy || !arenaCamera) return;
+            // A simple fit only when excavation puts a Summoner below the starting view.
+            float bottom=Mathf.Min(-10,Mathf.Min(player.transform.position.y,enemy.transform.position.y)-3);
+            float size=Mathf.Max(12,Mathf.Max(25/arenaCamera.aspect,(14-bottom)/2));
+            arenaCamera.orthographicSize=size;
+            arenaCamera.transform.position=new Vector3(0,(14+bottom)/2,-10);
         }
 
         private void RefreshViewport()
@@ -186,7 +178,7 @@ namespace AetherWild
             safeRoot.anchorMin = new Vector2(lastSafe.xMin / lastWidth, lastSafe.yMin / lastHeight);
             safeRoot.anchorMax = new Vector2(lastSafe.xMax / lastWidth, lastSafe.yMax / lastHeight);
             safeRoot.offsetMin = safeRoot.offsetMax = Vector2.zero;
-            arenaCamera.orthographicSize = Mathf.Max(10.5f, 18f / arenaCamera.aspect);
+            arenaCamera.orthographicSize = Mathf.Max(12f, 25f / arenaCamera.aspect);
             UpdateSuspension();
             ClearInput();
         }

@@ -10,32 +10,34 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
-  m_Name: AetherBolt
+  m_Name: Fault
   m_EditorClassIdentifier:
-  id: origin.aether-bolt
-  displayName: Aether Bolt
-  school: 0
-  form: 0
-  classAffinity: 4
-  maxUses: 0
-  unlimitedUses: 1
+  id: starter.fault
+  displayName: Fault
+  school: 1
+  form: 5
+  classAffinity: 3
+  maxUses: 2
+  unlimitedUses: 0
   usesProjectile: 1
   projectileSpeed: 20
   gravityScale: 1
   launchPowerMin: 0.25
   launchPowerMax: 1
   collisionRadius: 0.16
-  baseDamage: 20
+  baseDamage: 10
   splashRadius: 0
   damageFalloff: 0
   knockbackForce: 0
-  terrainDamageRadius: 0.35
+  terrainDamageRadius: 3.2
   createsTerrain: 0
   destroysTerrain: 1
   shieldAmount: 0
   displacementDistance: 0
+  targetingRange: 7
+  wallSize: {x: 1.5, y: 2.5}
   resonanceEligible: 1
-  resonanceModifiedStat: damage
+  resonanceModifiedStat: terrain
   resonanceBonusPercent: 5
   icon: {fileID: 0}
   projectileVFX: {fileID: 0}

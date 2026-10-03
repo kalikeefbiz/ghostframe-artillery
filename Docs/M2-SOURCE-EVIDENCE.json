@@ -1,0 +1,12 @@
+{
+  "baseline": "1f40ac1d22750bf119796ed2b95f3c585c562267",
+  "preserved": {
+    "Assets/AetherWild/Runtime/Combat/Ballistics.cs": "38aeca0641eedccb017914e10402a0a21ba7abd3e7e084779f783d4cace325a0",
+    "Assets/AetherWild/Runtime/Combat/SummonerDefinition.cs": "5ab97293e0003964f11988cb99e0ae630e7ca689ec49d877ea048f998b74c631",
+    "Assets/AetherWild/Runtime/HoldControl.cs": "82211b64956745edc99076f370e9798d0a2ef7f0dc4a5128268d867a05bad46b",
+    "Assets/AetherWild/Scenes/Foundation.unity": "85fa08728cd5180171be1dc12c0edfa545b68adabbfaba355c41a1b6449cc7fd",
+    "ProjectSettings/EditorBuildSettings.asset": "f67c2d51bb05a20252f792ac9f9463422e99ef68817f68c2930b50b3c1ffb5b1",
+    "ProjectSettings/ProjectVersion.txt": "130c4cd3c0f81b504317de1afcc001feb9923e1136c9b373cd932971c5276587"
+  },
+  "art_sha256": "50c9e996378e6f83de47c4717aad58e7480926b19b410918e8aacdbd63f84e13"
+}

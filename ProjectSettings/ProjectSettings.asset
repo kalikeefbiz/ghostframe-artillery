@@ -16,7 +16,7 @@ PlayerSettings:
   allowedAutorotateToLandscapeLeft: 1
   activeInputHandler: 0
   runInBackground: 0
-  bundleVersion: 0.1.0
+  bundleVersion: 0.2.0
   colorSpace: 0
   webGLCompressionFormat: 2
   webGLDecompressionFallback: 1

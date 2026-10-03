@@ -16,7 +16,7 @@ namespace AetherWild.Editor
         {
             PlayerSettings.companyName = "GhostFrame Studios";
             PlayerSettings.productName = "AetherWild";
-            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.bundleVersion = "0.2.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
@@ -35,6 +35,7 @@ namespace AetherWild.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Scene, true) };
             AssetDatabase.SaveAssets();
             CombatChecks.Run();
+            SliceChecks.Run();
         }
 
         public void OnPreprocessBuild(BuildReport report)

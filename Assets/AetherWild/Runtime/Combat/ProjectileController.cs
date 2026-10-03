@@ -17,6 +17,7 @@ namespace AetherWild
         private bool resolved;
         private const float Step = 0.005f;
         private const float MaxLifetime = 10;
+        private float minimumY=-12;
 
         public void Initialize(SummonerCombat caster, SigilDefinition sigil, Vector2 direction, float power,
             Action<Collider2D, Vector2> callback)
@@ -28,6 +29,8 @@ namespace AetherWild
             gravity = sigil.Gravity;
             transform.position = origin;
             onResolved = callback;
+            var terrain=FindFirstObjectByType<TerrainSystem>();
+            if(terrain) minimumY=terrain.Map.killY-2;
         }
 
         private bool Valid(Collider2D collider)
@@ -59,7 +62,7 @@ namespace AetherWild
                 if (nearest.collider) { Resolve(nearest.collider, nearest.point); return; }
                 age = nextAge;
                 transform.position = to;
-                if (to.y < -12 || Mathf.Abs(to.x) > 80 || age >= MaxLifetime)
+                if (to.y < minimumY || Mathf.Abs(to.x) > 80 || age >= MaxLifetime)
                 { Resolve(null, to); return; }
             }
         }

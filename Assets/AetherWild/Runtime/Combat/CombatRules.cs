@@ -6,16 +6,24 @@ namespace AetherWild
     public enum TurnPhase { Acting, Resolving, Finished }
     public enum SummonerClass { Embodiment, Conduit, Shaper, Manipulator, Expellant, Specialist }
     public enum SigilSchool { Origin, Aerth, Ash, Aurora, Tempest, Lunar, XO, Seeker }
-    public enum SigilForm { Projectile, Bomb, Construct, Shift, Ward }
+    public enum SigilForm { Projectile, Bomb, Construct, Shift, Ward, TerrainManipulation }
 
     public sealed class HealthState
     {
         public int Maximum { get; }
         public int Current { get; private set; }
+        public int Shield { get; private set; }
         public bool Defeated => Current == 0;
         public HealthState(int maximum) { Maximum = Math.Max(1, maximum); Reset(); }
-        public void Reset() => Current = Maximum;
-        public void Damage(int amount) => Current = Math.Max(0, Current - Math.Max(0, amount));
+        public void Reset() { Current = Maximum; Shield = 0; }
+        public void GrantShield(int amount) => Shield = Math.Max(Shield, Math.Max(0, amount));
+        public void Damage(int amount)
+        {
+            amount = Math.Max(0, amount);
+            int absorbed = Math.Min(Shield, amount);
+            Shield -= absorbed;
+            Current = Math.Max(0, Current - (amount - absorbed));
+        }
     }
 
     // Pure turn rules: callers cannot double-cast or advance a finished match.

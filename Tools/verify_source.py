@@ -1,42 +1,49 @@
 #!/usr/bin/env python3
-"""Source-integrity checks only. This is not a Unity compiler or runtime test."""
+"""Source/data integrity only. Not a Unity compiler or physics test."""
 from pathlib import Path
-import hashlib
-import json
-import re
-import struct
-import sys
-
-root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
-def require(condition, message):
+import hashlib,json,re,sys
+root=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]
+def check(condition,message):
     if not condition: raise SystemExit(message)
-json.loads((root / 'Packages/manifest.json').read_text())
-metas = list((root / 'Assets').rglob('*.meta'))
-guids = {}
-for path in metas:
-    match = re.search(r'^guid: ([a-f0-9]{32})$', path.read_text(), re.M)
-    require(match is not None, 'Missing GUID: ' + str(path))
-    require(match[1] not in guids, 'Duplicate GUID: ' + str(path))
-    guids[match[1]] = path
-for path in (root / 'Assets').rglob('*'):
-    if path.suffix == '.meta': continue
-    require(Path(str(path) + '.meta').exists(), 'Missing meta: ' + str(path))
-    if path.is_file():
-        for reference in re.findall(r'guid: ([a-f0-9]{32})', path.read_text()):
-            require(reference in guids, 'Unresolved asset reference: ' + str(path))
-version = (root / 'ProjectSettings/ProjectVersion.txt').read_text()
-require('m_EditorVersion: 6000.0.60f1\n' in version, 'Unexpected Unity version')
-scene = (root / 'Assets/AetherWild/Scenes/Foundation.unity').read_text()
-require('  mae: {fileID: 11400000, guid:' in scene, 'Missing scene Mae reference')
-map_text = (root / 'Assets/AetherWild/Data/Battlefield.asset').read_text()
-heights = struct.unpack('<64i', bytes.fromhex(re.search(r'  heights: (\w+)', map_text)[1]))
-require(min(heights) > 0, 'Invalid authored terrain')
-for x in (-12, 12): require(-5 + heights[int((x + 16) / .5)] * .5 <= -.6, 'Spawn overlaps terrain')
-manifest_path = root / 'Docs/M0-PRESERVED-SHA256.json'
-for path, digest in json.loads(manifest_path.read_text()).items():
-    require(hashlib.sha256((root/path).read_bytes()).hexdigest() == digest, 'Validated M0 file changed: ' + path)
-for path in root.rglob('*'):
-    require(not any(part.lower() in ('library', 'temp', 'logs', 'obj', 'build', 'builds', 'buildcache', '.git')
-                    for part in path.relative_to(root).parts), 'Excluded cache in source: ' + str(path))
-print('PASS: manifest, Unity version, GUIDs/references, scene wiring, spawn clearance, M0 preservation, cache exclusion.')
-print('Unity C# compilation, physical collision, rendering, and iPhone acceptance require Unity/device execution.')
+json.loads((root/'Packages/manifest.json').read_text())
+guids={}
+for p in (root/'Assets').rglob('*.meta'):
+    m=re.search(r'^guid: ([a-f0-9]{32})$',p.read_text(),re.M)
+    check(m is not None,'Bad GUID '+str(p))
+    check(m[1] not in guids,'Duplicate GUID '+str(p));guids[m[1]]=p
+for p in (root/'Assets').rglob('*'):
+    if p.suffix=='.meta':continue
+    check(Path(str(p)+'.meta').exists(),'Missing meta '+str(p))
+    if p.is_file() and p.suffix in ('.cs','.asset','.unity','.shader'):
+        for g in re.findall(r'guid: ([a-f0-9]{32})',p.read_text()):
+            check(g in guids,'Unresolved reference '+str(p))
+check('m_EditorVersion: 6000.0.60f1\n' in (root/'ProjectSettings/ProjectVersion.txt').read_text(),'Unity version changed')
+evidence=json.loads((root/'Docs/M2-SOURCE-EVIDENCE.json').read_text())
+for path,digest in evidence['preserved'].items():
+    check(hashlib.sha256((root/path).read_bytes()).hexdigest()==digest,'Preserved source changed '+path)
+check(hashlib.sha256((root/'Assets/AetherWild/Art/WildsDepth1.jpeg').read_bytes()).hexdigest()==evidence['art_sha256'],'Original artwork changed')
+def field(text,key):
+    m=re.search(r'^  '+key+r': (.+)$',text,re.M)
+    check(m is not None,'Missing field '+key)
+    return m[1]
+names=['AetherBolt','LilBomb','Fault','Wall','SummonersStep','Brace']
+uses=[0,3,2,2,2,2];classes=[4,4,3,2,0,1]
+for i,name in enumerate(names):
+    data=(root/('Assets/AetherWild/Data/'+name+'.asset')).read_text()
+    check(int(field(data,'maxUses'))==uses[i],'Uses '+name)
+    check(int(field(data,'classAffinity'))==classes[i],'Affinity '+name)
+    check(int(field(data,'unlimitedUses'))==(1 if i==0 else 0),'Unlimited '+name)
+    check(float(field(data,'resonanceBonusPercent'))==5,'Bonus '+name)
+mae=(root/'Assets/AetherWild/Data/Mae.asset').read_text()
+check(len(re.findall(r'^  - \{fileID: 11400000',mae,re.M))==6,'Six-Sigil loadout')
+check(field(mae,'summonerClass')=='1','Mae must remain Conduit')
+terrain=(root/'Assets/AetherWild/Data/Battlefield.asset').read_text()
+points=[tuple(map(float,m)) for m in re.findall(r'^  - \{x: ([-.\d]+), y: ([-.\d]+)\}',terrain,re.M)]
+check(len(points)==14,'Authored surface')
+check(all(points[i][0]<points[i+1][0] for i in range(13)),'Surface ordering')
+check(max(abs((b[1]-a[1])/(b[0]-a[0])) for a,b in zip(points,points[1:]))<=1,'Ramp steeper than 45 degrees')
+check(points[6][1]>points[3][1]+1.1,'Low shot not blocked')
+for p in root.rglob('*'):
+    check(not any(c.lower() in ('library','temp','logs','obj','build','builds','buildcache','.git','__pycache__') for c in p.relative_to(root).parts),'Cache in source '+str(p))
+print('PASS: Unity version, manifests, GUIDs, references, original art, preserved M1 files, six Sigil parameters, collision profile.')
+print('Unity compilation, shaders, collision physics, WebGL and iPhone acceptance remain pending.')

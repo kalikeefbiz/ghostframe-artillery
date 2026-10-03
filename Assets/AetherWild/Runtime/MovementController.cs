@@ -12,6 +12,7 @@ namespace AetherWild
         private bool hop;
         private float speed;
         private float hopSpeed;
+        private float impulseX;
 
         public void Initialize(float moveSpeed, float jumpSpeed)
         {
@@ -33,7 +34,8 @@ namespace AetherWild
         {
             if (!body) return;
             var velocity = body.linearVelocity;
-            velocity.x = direction * speed;
+            velocity.x = direction * speed + impulseX;
+            impulseX = Mathf.MoveTowards(impulseX, 0, 12 * Time.fixedDeltaTime);
             if (hop && Grounded()) velocity.y = hopSpeed;
             hop = false;
             body.linearVelocity = velocity;
@@ -54,6 +56,12 @@ namespace AetherWild
             body.position = position;
             body.linearVelocity = Vector2.zero;
             body.angularVelocity = 0;
+            impulseX = 0;
+        }
+        public void ApplyKnockback(Vector2 impulse)
+        {
+            impulseX += impulse.x;
+            body.linearVelocity += Vector2.up * impulse.y;
         }
     }
 }

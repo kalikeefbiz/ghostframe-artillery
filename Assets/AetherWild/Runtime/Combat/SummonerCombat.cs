@@ -11,6 +11,10 @@ namespace AetherWild
         public MovementController Movement { get; private set; }
         public SigilLoadout Loadout { get; private set; }
         public Vector2 LaunchOrigin => (Vector2)transform.position + Vector2.up * 0.45f;
+        public bool Resonant => Loadout.Matches(Definition.summonerClass) * 4 >= Loadout.Count * 3 && Loadout.Count > 0;
+        public float Bonus(SigilDefinition sigil, string stat)
+            => Resonant && sigil.resonanceEligible && sigil.classAffinity == Definition.summonerClass
+                && sigil.resonanceModifiedStat == stat ? 1 + sigil.resonanceBonusPercent / 100f : 1;
         public void Initialize(Side side, SummonerDefinition definition)
         {
             Side = side;
@@ -31,6 +35,14 @@ namespace AetherWild
     {
         private readonly SigilDefinition[] equipped;
         private readonly int[] remaining;
+        public int Count => equipped.Length;
+        public int Uses(int slot) => Get(slot) ? remaining[slot] : 0;
+        public int Matches(SummonerClass kind)
+        {
+            int count = 0;
+            foreach (var sigil in equipped) if (sigil && sigil.classAffinity == kind) count++;
+            return count;
+        }
         public SigilLoadout(SigilDefinition[] definitions)
         {
             equipped = (SigilDefinition[])definitions.Clone();

@@ -51,12 +51,12 @@ namespace AetherWild.Editor
             var mae = AssetDatabase.LoadAssetAtPath<SummonerDefinition>("Assets/AetherWild/Data/Mae.asset");
             Check(bolt && mae, "data assets import");
             Check(mae.summonerClass == SummonerClass.Conduit && mae.startingHP == 100, "Mae identity");
-            Check(mae.startingLoadout.Length == 1 && mae.startingLoadout[0] == bolt, "single universal Sigil");
+            Check(mae.startingLoadout.Length == 6 && mae.startingLoadout[0] == bolt, "six universal Sigils");
             Check(bolt.baseDamage == 20 && bolt.unlimitedUses && bolt.classAffinity == SummonerClass.Expellant,
                 "baseline Bolt values");
             Check(bolt.school == SigilSchool.Origin && bolt.form == SigilForm.Projectile && bolt.usesProjectile,
                 "Bolt school and form");
-            Check(!bolt.destroysTerrain && !bolt.createsTerrain && bolt.shieldAmount == 0, "M1 scope");
+            Check(bolt.destroysTerrain && !bolt.createsTerrain && bolt.shieldAmount == 0, "M2 Bolt terrain impact");
             var loadout = new SigilLoadout(mae.startingLoadout);
             for (int i = 0; i < 100; i++) Check(loadout.Spend(0), "unlimited uses and off-class allowed");
             var finite = ScriptableObject.CreateInstance<SigilDefinition>();

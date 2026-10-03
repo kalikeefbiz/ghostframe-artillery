@@ -33,6 +33,8 @@ namespace AetherWild
         [Header("Defense / movement (metadata only in M1)")]
         public int shieldAmount;
         public float displacementDistance;
+        public float targetingRange = 7;
+        public Vector2 wallSize = new Vector2(1.5f, 2.5f);
         [Header("Resonance (metadata only; threshold is 75% of equipped loadout)")]
         public bool resonanceEligible = true;
         public string resonanceModifiedStat;

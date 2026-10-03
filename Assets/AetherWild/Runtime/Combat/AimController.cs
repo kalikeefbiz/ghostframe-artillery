@@ -13,6 +13,19 @@ namespace AetherWild
         private readonly SpriteRenderer[] dots = new SpriteRenderer[14];
         public Vector2 Direction { get; private set; }
         public float Power { get; private set; }
+        public Vector2 Target { get; private set; }
+        public bool TargetValid
+        {
+            get
+            {
+                var s=match.Player.Loadout.Get(match.SelectedSlot);
+                if(s.form==SigilForm.Construct) return match.Terrain.WallPosition(Target,match.Player,s.targetingRange,
+                    s.wallSize*match.Player.Bonus(s,"terrain"),out _);
+                if(s.form==SigilForm.Shift) return match.Terrain.Standing(Target,match.Player,match.Enemy,
+                    s.displacementDistance*match.Player.Bonus(s,"movement"),out _);
+                return true;
+            }
+        }
         public void Initialize(MatchManager session, Sprite sprite)
         {
             match = session;
@@ -42,13 +55,16 @@ namespace AetherWild
             if (!match.PlayerCanAct || pointer.HasValue) return;
             pointer = e.pointerId;
             start = e.position;
+            Target=Camera.main.ScreenToWorldPoint(e.position);
         }
         public void OnDrag(PointerEventData e)
         {
             if (pointer != e.pointerId || !match.PlayerCanAct) return;
+            Target=Camera.main.ScreenToWorldPoint(e.position);
+            if(!match.Player.Loadout.Get(match.SelectedSlot).usesProjectile) return;
             Vector2 drag = e.position - start;
             if (drag.magnitude < 8) return;
-            var sigil = match.Player.Loadout.Get(0);
+            var sigil = match.Player.Loadout.Get(match.SelectedSlot);
             Direction = drag.normalized;
             float fullDrag = Mathf.Max(80, Mathf.Min(Screen.width, Screen.height) * 0.36f);
             Power = Mathf.Lerp(sigil.launchPowerMin, sigil.launchPowerMax, Mathf.Clamp01(drag.magnitude / fullDrag));
@@ -61,7 +77,18 @@ namespace AetherWild
             vector.enabled = visible;
             for (int i = 0; i < dots.Length; i++) dots[i].enabled = visible;
             if (!visible) { CancelDrag(); return; }
-            var sigil = match.Player.Loadout.Get(0);
+            var sigil = match.Player.Loadout.Get(match.SelectedSlot);
+            if(!sigil.usesProjectile)
+            {
+                foreach(var dot in dots) dot.enabled=false;
+                vector.enabled=sigil.form!=SigilForm.Ward;
+                vector.transform.position=Target;
+                vector.transform.rotation=Quaternion.identity;
+                vector.transform.localScale=new Vector3(.65f,.18f,1);
+                vector.color=TargetValid?Color.green:Color.red;
+                return;
+            }
+            vector.color=new Color(1,.86f,.38f);
             Vector2 origin = match.Player.LaunchOrigin;
             vector.transform.position = origin + Direction * 0.7f;
             vector.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(Direction.y, Direction.x) * Mathf.Rad2Deg);

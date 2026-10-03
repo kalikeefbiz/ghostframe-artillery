@@ -10,30 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
-  m_Name: AetherBolt
+  m_Name: LilBomb
   m_EditorClassIdentifier:
-  id: origin.aether-bolt
-  displayName: Aether Bolt
-  school: 0
-  form: 0
+  id: starter.lilbomb
+  displayName: Lil' Bomb
+  school: 2
+  form: 1
   classAffinity: 4
-  maxUses: 0
-  unlimitedUses: 1
+  maxUses: 3
+  unlimitedUses: 0
   usesProjectile: 1
   projectileSpeed: 20
   gravityScale: 1
   launchPowerMin: 0.25
   launchPowerMax: 1
   collisionRadius: 0.16
-  baseDamage: 20
-  splashRadius: 0
-  damageFalloff: 0
-  knockbackForce: 0
-  terrainDamageRadius: 0.35
+  baseDamage: 30
+  splashRadius: 2.5
+  damageFalloff: 1
+  knockbackForce: 2.2
+  terrainDamageRadius: 1.7
   createsTerrain: 0
   destroysTerrain: 1
   shieldAmount: 0
   displacementDistance: 0
+  targetingRange: 7
+  wallSize: {x: 1.5, y: 2.5}
   resonanceEligible: 1
   resonanceModifiedStat: damage
   resonanceBonusPercent: 5
