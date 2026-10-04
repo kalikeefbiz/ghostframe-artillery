@@ -171,41 +171,55 @@ namespace AetherWild
             bottom=default;
             if(!caster || size.x<=0 || size.y<=0) return false;
 
-            // Like Step, Wall targeting is horizontal-first for touch screens. The tap selects
-            // the column; the wall then snaps to the CURRENT top terrain surface at that X.
+            // Terrain occupancy is authoritative. Resolve the tapped X directly against the
+            // CURRENT solid grid instead of depending on CompositeCollider raycast timing.
             float x=Left+Mathf.Round((requested.x-Left)/S)*S;
             float half=size.x/2+S/2;
             if(x-half<Left || x+half>Right) return false;
 
-            float highest=float.NegativeInfinity,lowest=float.PositiveInfinity;
+            float highest=float.NegativeInfinity;
+            float lowest=float.PositiveInfinity;
             for(int i=0;i<3;i++)
             {
                 float sampleX=x+Mathf.Lerp(-size.x*.35f,size.x*.35f,i/2f);
-                if(!TopSurface(sampleX,out var hit) || hit.normal.y<.35f) return false;
-                highest=Mathf.Max(highest,hit.point.y);
-                lowest=Mathf.Min(lowest,hit.point.y);
+                if(!GridTop(sampleX,out float y)) return false;
+                highest=Mathf.Max(highest,y);
+                lowest=Mathf.Min(lowest,y);
             }
 
-            // Permit ordinary slopes and crater lips, while still preventing a wall from
-            // bridging a large gap with no meaningful foundation.
+            // Require a believable foundation, but allow ordinary crater lips/slopes.
             if(highest-lowest>Mathf.Max(S*3,size.y*.65f)) return false;
 
-            bottom=new Vector2(x,Bottom+Mathf.Ceil((highest-Bottom)/S)*S);
-            if(Vector2.Distance(caster.transform.position,bottom)>range ||
+            bottom=new Vector2(x,highest);
+            if(Mathf.Abs(bottom.x-caster.transform.position.x)>range ||
                 bottom.y+size.y+S/2>Bottom+H*S) return false;
 
-            var filter=new ContactFilter2D{useTriggers=false};
-            int n=Physics2D.OverlapBox(bottom+Vector2.up*(size.y*.5f+S*.35f),
-                new Vector2(size.x+S*.5f,Mathf.Max(.1f,size.y-S*.3f)),0,filter,overlaps);
-            if(n==overlaps.Length) return false;
-            for(int i=0;i<n;i++)
+            // Reject only real Summoner overlap. Terrain beneath the wall is its foundation.
+            var wallCenter=bottom+Vector2.up*size.y*.5f;
+            var wallHalf=new Vector2(size.x*.5f,size.y*.5f);
+            foreach(var summoner in FindObjectsByType<SummonerCombat>(FindObjectsSortMode.None))
             {
-                var overlap=overlaps[i];
-                if(!overlap || overlap==composite || overlap==tileCollider) continue;
-                return false;
+                if(!summoner) continue;
+                Vector2 delta=(Vector2)summoner.transform.position-wallCenter;
+                if(Mathf.Abs(delta.x)<wallHalf.x+.45f && Mathf.Abs(delta.y)<wallHalf.y+.65f)
+                    return false;
             }
             return true;
         }
+
+        private bool GridTop(float worldX,out float worldY)
+        {
+            worldY=0;
+            int gx=Mathf.Clamp(Mathf.RoundToInt((worldX-Left)/S),0,W);
+            for(int y=H;y>=0;y--)
+            {
+                if(!solid[gx,y]) continue;
+                worldY=Center(gx,y).y;
+                return true;
+            }
+            return false;
+        }
+
         private bool TopSurface(float x,out RaycastHit2D surface)
         {
             surface=default;
