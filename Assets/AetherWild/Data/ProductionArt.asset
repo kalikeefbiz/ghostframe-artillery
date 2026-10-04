@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87f8c35fe4a46c29b731140667efc80b, type: 3}
+  m_Name: ProductionArt
+  m_EditorClassIdentifier:
+  maeIdle: {fileID: 21300000, guid: 71d496c85917d5b8e7982648efae7e58, type: 3}
+  maeWalkA: {fileID: 21300000, guid: c62c7f5840685e67a9b33bce305d712c, type: 3}
+  maeWalkB: {fileID: 21300000, guid: 30b73b14eeade5129d33cff5f5805f8d, type: 3}
+  maeCast: {fileID: 21300000, guid: cfc1e356f899b9e7a15324c70e8827e6, type: 3}
+  maeHit: {fileID: 21300000, guid: 26c71c43050dcc01c335443e842ffcff, type: 3}
+  maeDefeat: {fileID: 21300000, guid: e7a045f78c7bc85161fcf06da99f6b68, type: 3}
+  healthFrame: {fileID: 21300000, guid: ce45b2a4a1d8143116bef671eefd8099, type: 3}
+  shieldFrame: {fileID: 21300000, guid: b5ed18215e82b42ad6d4286d81925567, type: 3}
+  hudPanel: {fileID: 21300000, guid: 5c421e0d9a21c63a5db0b6f761c67fce, type: 3}
+  primaryButton: {fileID: 21300000, guid: fa23d2777c3aa3cb1a1c89c78f262112, type: 3}
+  secondaryButton: {fileID: 21300000, guid: ade522c380563ca4137c0496a828713f, type: 3}
+  sigilSlot: {fileID: 21300000, guid: 1cbb6998786a50189e6f09d0609ae9ed, type: 3}
+  sigilSelected: {fileID: 21300000, guid: 0a7b3d16c73b64692d69e2b52fffdcdc, type: 3}
+  title: {fileID: 21300000, guid: 956b80a6ecd413176f54bf6afb4dd3d9, type: 3}

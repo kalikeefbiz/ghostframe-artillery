@@ -10,7 +10,10 @@ namespace AetherWild
             var ai=match.Enemy; var player=match.Player; var terrain=match.Terrain;
             Vector2 position=ai.transform.position, target=player.transform.position;
             var best=new Plan{slot=-1,score=-100,direction=Vector2.up,power=.85f};
-            bool danger=!terrain.Supported(position) || position.y<target.y-2;
+            // Being lower than the player (or falling into a new crater) is not an escape trigger.
+            // Step remains available for deliberate boundary safety once actually grounded.
+            bool danger=terrain.Grounded(ai) &&
+                (position.x<terrain.Left+1.5f || position.x>terrain.Right-1.5f);
             for(int slot=0;slot<ai.Loadout.Count;slot++)
             {
                 if(!ai.Loadout.Available(slot)) continue;

@@ -17,6 +17,9 @@ namespace AetherWild
         private CompositeCollider2D composite;
         private Material artMaterial;
         private Mesh artMesh;
+        private Material backgroundMaterial;
+        private Mesh backgroundMesh;
+        public event System.Action Changed;
         private int W => Map.gridWidth;
         private int H => Map.gridHeight;
         private float S => Map.cellSize;
@@ -122,6 +125,7 @@ namespace AetherWild
             tileCollider.ProcessTilemapChanges();
             composite.GenerateGeometry();
             Physics2D.SyncTransforms();
+            Changed?.Invoke();
         }
         public int DestroyCircle(Vector2 center,float radius)
         {
@@ -151,19 +155,52 @@ namespace AetherWild
         public bool WallPosition(Vector2 requested,SummonerCombat caster,float range,Vector2 size,out Vector2 bottom)
         {
             bottom=default;
-            var hit=Physics2D.Raycast(requested+Vector2.up*1.5f,Vector2.down,4);
-            if(!hit.collider || !hit.collider.GetComponent<Tilemap>() || hit.normal.y<.55f) return false;
-            bottom=new Vector2(Mathf.Round(hit.point.x/S)*S,Mathf.Round(hit.point.y/S)*S);
-            if(Vector2.Distance(caster.transform.position,bottom)>range || bottom.x-size.x/2<Left ||
-                bottom.x+size.x/2>Right || bottom.y+size.y>Map.origin.y+H*S) return false;
-            var boxCenter=bottom+Vector2.up*(size.y/2+.12f);
-            int n=Physics2D.OverlapBox(boxCenter,new Vector2(size.x,size.y-.1f),0,
-                new ContactFilter2D{useTriggers=false},overlaps);
-            for(int i=0;i<n;i++) if(overlaps[i]) return false;
-            // Require solid support near both bottom corners.
-            return Physics2D.Raycast(bottom+new Vector2(-size.x*.4f,.3f),Vector2.down,.8f).collider
-                && Physics2D.Raycast(bottom+new Vector2(size.x*.4f,.3f),Vector2.down,.8f).collider;
+            float x=Left+Mathf.Round((requested.x-Left)/S)*S;
+            float half=size.x/2+S/2; // Include marching-square edge expansion.
+            if(!caster || size.x<=0 || size.y<=0 || x-half<Left || x+half>Right ||
+                requested.y<Bottom || requested.y>Bottom+H*S) return false;
+            float highest=float.NegativeInfinity,lowest=float.PositiveInfinity;
+            // Probe the CURRENT composite from clear sky. A finger may be slightly inside the
+            // visible surface; starting there produced fraction-zero 'hits' inside solid rock.
+            for(int i=0;i<5;i++)
+            {
+                if(!TopSurface(x+Mathf.Lerp(-size.x*.4f,size.x*.4f,i/4f),out var hit)) return false;
+                if(Mathf.Abs(hit.point.y-requested.y)>4 || hit.normal.y<.55f) return false;
+                highest=Mathf.Max(highest,hit.point.y); lowest=Mathf.Min(lowest,hit.point.y);
+            }
+            if(highest-lowest>S*2) return false; // No bridging trenches or steep sides.
+            bottom=new Vector2(x,Bottom+Mathf.Ceil((highest-Bottom)/S)*S);
+            if(Vector2.Distance(caster.transform.position,bottom)>range ||
+                bottom.y+size.y+S/2>Bottom+H*S) return false;
+            var filter=new ContactFilter2D{useTriggers=false};
+            // The supporting surface is allowed in the foundation band, but no Summoner is.
+            int n=Physics2D.OverlapBox(bottom+Vector2.up*size.y/2,
+                new Vector2(size.x+S,size.y+S),0,filter,overlaps);
+            if(n==overlaps.Length) return false;
+            for(int i=0;i<n;i++) if(overlaps[i] && overlaps[i]!=composite && overlaps[i]!=tileCollider) return false;
+            float clearanceBottom=bottom.y+S/2+.02f;
+            float top=bottom.y+size.y+S/2;
+            n=Physics2D.OverlapBox(new Vector2(x,(clearanceBottom+top)/2),
+                new Vector2(size.x+S,top-clearanceBottom),0,filter,overlaps);
+            return n==0;
         }
+        private bool TopSurface(float x,out RaycastHit2D surface)
+        {
+            surface=default;
+            foreach(var hit in Physics2D.RaycastAll(new Vector2(x,Bottom+H*S+1),Vector2.down,H*S+2))
+                if(hit.collider==composite && hit.fraction>0)
+                { surface=hit; return true; }
+            return false;
+        }
+        public bool Grounded(SummonerCombat summoner)
+        {
+            var shape=summoner.GetComponent<CapsuleCollider2D>();
+            int count=shape.Cast(Vector2.down,new ContactFilter2D{useTriggers=false},supportHits,.08f);
+            for(int i=0;i<count;i++)
+                if(supportHits[i].collider==composite && supportHits[i].normal.y>.5f) return true;
+            return false;
+        }
+        private readonly RaycastHit2D[] supportHits=new RaycastHit2D[8];
         public void CreateWall(Vector2 bottom,Vector2 size)
         {
             for(int x=0;x<=W;x++) for(int y=0;y<=H;y++)
@@ -181,6 +218,24 @@ namespace AetherWild
         }
         private void BuildArt()
         {
+            // Scenic image is an independent, non-colliding backdrop. Never sampled for terrain.
+            var background=new GameObject("Wilds scenic background",typeof(MeshFilter),typeof(MeshRenderer));
+            background.transform.SetParent(transform,false);
+            backgroundMesh=new Mesh();
+            // Enlarge the full, unchanged environment image behind the arena so excavations
+            // reveal distant scenery rather than the old foreground rocks at identical UVs.
+            float bh=H*S*3, bw=bh*Map.mapArt.width/Map.mapArt.height;
+            float bx=(W*S-bw)/2,by=H*S+4-bh;
+            backgroundMesh.vertices=new[]{new Vector3(bx,by,3),new Vector3(bx+bw,by,3),
+                new Vector3(bx+bw,by+bh,3),new Vector3(bx,by+bh,3)};
+            backgroundMesh.uv=new[]{Vector2.zero,Vector2.right,Vector2.one,Vector2.up};
+            backgroundMesh.triangles=new[]{0,2,1,0,3,2};backgroundMesh.RecalculateBounds();
+            background.GetComponent<MeshFilter>().sharedMesh=backgroundMesh;
+            backgroundMaterial=new Material(Map.mapShader);
+            backgroundMaterial.SetFloat("_BackgroundOnly",1);
+            backgroundMaterial.mainTexture=Map.mapArt;
+            background.GetComponent<MeshRenderer>().sharedMaterial=backgroundMaterial;
+            background.GetComponent<MeshRenderer>().sortingOrder=-20;
             var go=new GameObject("Original Wilds art and terrain state",typeof(MeshFilter),typeof(MeshRenderer));
             // The source JPEG is sampled unchanged. Only the occupancy/deformation overlay changes.
             go.transform.SetParent(transform,false);
@@ -222,6 +277,7 @@ namespace AetherWild
             if(tileTexture) Destroy(tileTexture); if(mask) Destroy(mask); if(originalMask) Destroy(originalMask);
             if(artMaterial) Destroy(artMaterial); if(artMesh) Destroy(artMesh);
             if(sourceHeight) Destroy(sourceHeight);
+            if(backgroundMaterial) Destroy(backgroundMaterial); if(backgroundMesh) Destroy(backgroundMesh);
         }
     }
 }

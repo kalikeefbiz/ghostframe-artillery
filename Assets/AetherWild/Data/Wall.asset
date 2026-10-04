@@ -39,7 +39,7 @@ MonoBehaviour:
   resonanceEligible: 1
   resonanceModifiedStat: terrain
   resonanceBonusPercent: 5
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 5ce440d888bbb46545bde987bcfb01e2, type: 3}
   projectileVFX: {fileID: 0}
   impactVFX: {fileID: 0}
   sfx: {fileID: 0}

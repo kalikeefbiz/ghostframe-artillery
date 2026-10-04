@@ -9,6 +9,7 @@ namespace AetherWild
     {
         [SerializeField] private BattlefieldDefinition battlefield;
         [SerializeField] private SummonerDefinition mae;
+        [SerializeField] private ProductionArt productionArt;
         private MatchManager match;
         private CombatHUD combatHUD;
         private bool focused = true;
@@ -20,6 +21,7 @@ namespace AetherWild
         private HoldControl hop;
         private RectTransform safeRoot;
         private Text status;
+        private Image statusSkin;
         private Camera arenaCamera;
         private Sprite placeholder;
         private Texture2D texture;
@@ -61,9 +63,14 @@ namespace AetherWild
             enemyCombat.Initialize(Side.Enemy, mae);
             match = gameObject.AddComponent<MatchManager>();
             match.Initialize(playerCombat, enemyCombat, battlefield, placeholder);
+            player.gameObject.AddComponent<MaePresentation>().Initialize(playerCombat,match,productionArt,
+                player.GetComponentInChildren<SpriteRenderer>());
+            enemy.gameObject.AddComponent<MaePresentation>().Initialize(enemyCombat,match,productionArt,
+                enemy.GetComponentInChildren<SpriteRenderer>());
             match.StateChanged += ClearInput;
             combatHUD = gameObject.AddComponent<CombatHUD>();
-            combatHUD.Initialize(safeRoot, match, placeholder);
+            combatHUD.Initialize(safeRoot, match, placeholder, productionArt);
+            SetMenuVisibility();
             RefreshViewport();
         }
 
@@ -98,10 +105,18 @@ namespace AetherWild
             scaler.matchWidthOrHeight = 1;
             safeRoot = new GameObject("Safe area", typeof(RectTransform)).GetComponent<RectTransform>();
             safeRoot.SetParent(canvas.transform, false);
-            var title = Label("AETHERWILD  /  THE WILDS — DEPTH 1", safeRoot, 25);
+            var title = new GameObject("AetherWild title",typeof(RectTransform),typeof(Image)).GetComponent<Image>();
+            title.transform.SetParent(safeRoot,false);
+            title.sprite=productionArt.title;title.preserveAspect=true;title.raycastTarget=false;
             Place(title.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -30), new Vector2(-32, 42));
             status = Label("", safeRoot, 22);
             Place(status.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -76), new Vector2(-32, 44));
+            // Use a compact frame behind the existing turn/timer text, not across the arena.
+            statusSkin=ProductionArt.Skin(status,productionArt.hudPanel);
+            statusSkin.rectTransform.anchorMin=statusSkin.rectTransform.anchorMax=new Vector2(.5f,1);
+            statusSkin.rectTransform.anchoredPosition=new Vector2(0,-76);
+            statusSkin.rectTransform.sizeDelta=new Vector2(520,44);
+            ProductionArt.TextOutline(status);
             left = Control("LEFT", new Vector2(0, 0), new Vector2(90, 150));
             right = Control("RIGHT", new Vector2(0, 0), new Vector2(230, 150));
             hop = Control("HOP", new Vector2(1, 0), new Vector2(-90, 150));
@@ -114,8 +129,10 @@ namespace AetherWild
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(safeRoot, false);
             Place(rect, anchor, anchor, position, new Vector2(120, 100));
-            go.GetComponent<Image>().color = new Color(0.16f, 0.23f, 0.25f, 0.95f);
+            go.GetComponent<Image>().color = Color.clear;
+            ProductionArt.Skin(go.GetComponent<Image>(),productionArt.secondaryButton);
             var text = Label(label, rect, 26);
+            ProductionArt.TextOutline(text);
             Place(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             return go.GetComponent<HoldControl>();
         }
@@ -145,6 +162,7 @@ namespace AetherWild
 
         private void Update()
         {
+            SetMenuVisibility();
             if (Screen.width != lastWidth || Screen.height != lastHeight || Screen.safeArea != lastSafe)
                 RefreshViewport();
             float keyboard = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1 : 0)
@@ -157,6 +175,17 @@ namespace AetherWild
             status.text = landscape
                 ? $"{turn}  |  {Mathf.CeilToInt(match.Turns.SecondsRemaining)}s  |  Turn {match.Turns.TurnNumber}"
                 : "Rotate your phone to landscape";
+        }
+        private void SetMenuVisibility()
+        {
+            bool visible=!match.InMenu;
+            status.gameObject.SetActive(visible);
+            statusSkin.gameObject.SetActive(visible);
+            left.gameObject.SetActive(visible);
+            right.gameObject.SetActive(visible);
+            hop.gameObject.SetActive(visible);
+            player.GetComponentInChildren<SpriteRenderer>().enabled=visible;
+            enemy.GetComponentInChildren<SpriteRenderer>().enabled=visible;
         }
 
         private void LateUpdate()

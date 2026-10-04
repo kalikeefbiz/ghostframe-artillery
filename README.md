@@ -1,4 +1,10 @@
-# AetherWild — M2 vertical-slice source
+# AetherWild — M2.1 acceptance fixes and production art
+
+Current delivery: [M2.1 acceptance and upload notes](Docs/M2.1-ACCEPTANCE.md).
+The small update ZIP uses and preserves production PNGs already committed to main.
+Unity/cloud/device acceptance remains pending for this update.
+
+## Existing M2 foundation
 GhostFrame Studios · Unity 6000.0.60f1 (61dfb374e36f).
 
 Extends validated M1 main `1f40ac1d22750bf119796ed2b95f3c585c562267`.

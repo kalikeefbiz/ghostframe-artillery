@@ -32,6 +32,7 @@ namespace AetherWild
         public void StartMatch() { InMenu=false; Rematch(); }
         public event Action StateChanged;
         public event Action<Vector2> Impact;
+        public event Action<SummonerCombat,Vector2> SigilCast;
         private BattlefieldDefinition battlefield;
         private ProjectileController projectile;
         private Sprite projectileSprite;
@@ -45,6 +46,7 @@ namespace AetherWild
             battlefield = map;
             projectileSprite = sprite;
             Terrain = FindFirstObjectByType<TerrainSystem>();
+            Terrain.Changed += OnTerrainChanged;
             Turns.Changed += OnTurnChanged;
             Rematch();
         }
@@ -79,6 +81,9 @@ namespace AetherWild
             Turns.Tick(Time.deltaTime);
             if (Turns.CanAct(Side.Enemy))
             {
+                // Let current-terrain physics finish the fall before selecting any action.
+                if(!Terrain.Grounded(Enemy) || Mathf.Abs(Enemy.GetComponent<Rigidbody2D>().linearVelocity.y)>.2f)
+                { Enemy.Movement.ClearInput(); aiWait=1.1f; return; }
                 float horizontal=Player.transform.position.x-Enemy.transform.position.x;
                 bool canMove=false;
                 if(aiWait>.2f && MovementLeft>0 && Mathf.Abs(horizontal)>28)
@@ -116,6 +121,7 @@ namespace AetherWild
                 !Terrain.Standing(target,caster,opponent,sigil.displacementDistance * caster.Bonus(sigil,"movement"),out validTarget)) return false;
             if (!Turns.BeginCast(side)) return false;
             caster.Loadout.Spend(slot);
+            SigilCast?.Invoke(caster,direction);
             if(!sigil.usesProjectile)
             {
                 if(sigil.form == SigilForm.Ward) caster.Health.GrantShield(Mathf.RoundToInt(sigil.shieldAmount*caster.Bonus(sigil,"shield")));
@@ -150,7 +156,16 @@ namespace AetherWild
         }
         private void QueueResolution() { pendingResolution=true; settleTime=.45f; }
         private bool BothSettled() => Mathf.Abs(Player.GetComponent<Rigidbody2D>().linearVelocity.y)<.2f
-            && Mathf.Abs(Enemy.GetComponent<Rigidbody2D>().linearVelocity.y)<.2f;
+            && Mathf.Abs(Enemy.GetComponent<Rigidbody2D>().linearVelocity.y)<.2f
+            && Terrain.Grounded(Player) && Terrain.Grounded(Enemy);
+        private void OnTerrainChanged()
+        {
+            // Rebuilding a static composite must not leave an unsupported sleeping body aloft.
+            // Never reset a transform here: both Summoners settle with the existing gravity.
+            Player.GetComponent<Rigidbody2D>().WakeUp();
+            Enemy.GetComponent<Rigidbody2D>().WakeUp();
+            aiWait=1.1f;
+        }
         private void CheckFall(SummonerCombat summoner)
         {
             var p=summoner.transform.position;
@@ -215,6 +230,7 @@ namespace AetherWild
             generation++;
             if (projectile) projectile.Cancel();
             Turns.Changed -= OnTurnChanged;
+            if(Terrain) Terrain.Changed -= OnTerrainChanged;
         }
     }
 }

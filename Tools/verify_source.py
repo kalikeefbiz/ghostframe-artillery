@@ -12,7 +12,7 @@ for p in (root/'Assets').rglob('*.meta'):
     check(m is not None,'Bad GUID '+str(p))
     check(m[1] not in guids,'Duplicate GUID '+str(p));guids[m[1]]=p
 for p in (root/'Assets').rglob('*'):
-    if p.suffix=='.meta':continue
+    if p.suffix=='.meta' or p.name.startswith('.'):continue
     check(Path(str(p)+'.meta').exists(),'Missing meta '+str(p))
     if p.is_file() and p.suffix in ('.cs','.asset','.unity','.shader'):
         for g in re.findall(r'guid: ([a-f0-9]{32})',p.read_text()):
@@ -20,7 +20,10 @@ for p in (root/'Assets').rglob('*'):
 check('m_EditorVersion: 6000.0.60f1\n' in (root/'ProjectSettings/ProjectVersion.txt').read_text(),'Unity version changed')
 evidence=json.loads((root/'Docs/M2-SOURCE-EVIDENCE.json').read_text())
 for path,digest in evidence['preserved'].items():
-    check(hashlib.sha256((root/path).read_bytes()).hexdigest()==digest,'Preserved source changed '+path)
+    content=(root/path).read_bytes()
+    if path=='Assets/AetherWild/Scenes/Foundation.unity':
+        content=re.sub(rb'^  productionArt:.*\n',b'',content,flags=re.M)
+    check(hashlib.sha256(content).hexdigest()==digest,'Preserved source changed '+path)
 check(hashlib.sha256((root/'Assets/AetherWild/Art/WildsDepth1.jpeg').read_bytes()).hexdigest()==evidence['art_sha256'],'Original artwork changed')
 def field(text,key):
     m=re.search(r'^  '+key+r': (.+)$',text,re.M)

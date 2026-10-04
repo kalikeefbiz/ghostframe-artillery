@@ -39,7 +39,7 @@ MonoBehaviour:
   resonanceEligible: 1
   resonanceModifiedStat: movement
   resonanceBonusPercent: 5
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 7a2e277f67246d9f7162d9c48ab74b0c, type: 3}
   projectileVFX: {fileID: 0}
   impactVFX: {fileID: 0}
   sfx: {fileID: 0}

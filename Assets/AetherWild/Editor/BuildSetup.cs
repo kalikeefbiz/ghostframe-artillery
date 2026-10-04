@@ -27,7 +27,7 @@ namespace AetherWild.Editor
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
             PlayerSettings.WebGL.decompressionFallback = true;
             // Diagnostic compatibility build: avoid compressed-response/header dependencies.
-            // Current placeholders are runtime RGBA textures; no DXT/ASTC imports exist.
+            // Production sprites import as uncompressed RGBA; no DXT/ASTC dependency.
             EditorUserBuildSettings.webGLBuildSubtarget = WebGLTextureSubtarget.Generic;
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { UnityEngine.Rendering.GraphicsDeviceType.OpenGLES3 });
@@ -36,6 +36,7 @@ namespace AetherWild.Editor
             AssetDatabase.SaveAssets();
             CombatChecks.Run();
             SliceChecks.Run();
+            ProductionArtChecks.Run();
         }
 
         public void OnPreprocessBuild(BuildReport report)
