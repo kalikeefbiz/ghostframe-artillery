@@ -140,49 +140,71 @@ namespace AetherWild
             float range, out Vector2 destination)
         {
             destination=default;
-            if(requested.x<Left+.5f || requested.x>Right-.5f) return false;
-            // Select the nearest clear supported position, not an arbitrary midair point.
-            var hit=Physics2D.Raycast(requested+Vector2.up*1.5f,Vector2.down,4);
-            if(!hit.collider || !hit.collider.GetComponent<Tilemap>() || hit.normal.y<.55f) return false;
+            if(!caster || requested.x<Left+.5f || requested.x>Right-.5f) return false;
+
+            // Mobile targeting is horizontal-first: the tap chooses an X position and the
+            // current terrain resolves the actual standing surface below it. Requiring the
+            // finger to land within a tiny vertical band made Step effectively unusable.
+            float x=Left+Mathf.Round((requested.x-Left)/S)*S;
+            if(!TopSurface(x,out var hit) || hit.normal.y<.45f) return false;
+
             destination=hit.point+Vector2.up*.68f;
-            if(destination.y<Bottom+1 || destination.y+.61f>Bottom+H*S ||
+            if(destination.y<Bottom+.65f || destination.y+.61f>Bottom+H*S ||
                 Vector2.Distance(caster.transform.position,destination)>range) return false;
-            int n=Physics2D.OverlapCapsule(destination,new Vector2(.68f,1.22f),
+
+            int n=Physics2D.OverlapCapsule(destination,new Vector2(.68f,1.18f),
                 CapsuleDirection2D.Vertical,0,new ContactFilter2D{useTriggers=false},overlaps);
-            for(int i=0;i<n;i++) if(overlaps[i] && overlaps[i].gameObject!=caster.gameObject) return false;
+            for(int i=0;i<n;i++)
+            {
+                var overlap=overlaps[i];
+                if(!overlap || overlap.gameObject==caster.gameObject || overlap==composite || overlap==tileCollider) continue;
+                return false;
+            }
+
+            // Keep Step from resolving directly on top of the opposing Summoner even when
+            // collider setup changes later.
+            if(opponent && Vector2.Distance(destination,opponent.transform.position)<.9f) return false;
             return true;
         }
         public bool WallPosition(Vector2 requested,SummonerCombat caster,float range,Vector2 size,out Vector2 bottom)
         {
             bottom=default;
+            if(!caster || size.x<=0 || size.y<=0) return false;
+
+            // Like Step, Wall targeting is horizontal-first for touch screens. The tap selects
+            // the column; the wall then snaps to the CURRENT top terrain surface at that X.
             float x=Left+Mathf.Round((requested.x-Left)/S)*S;
-            float half=size.x/2+S/2; // Include marching-square edge expansion.
-            if(!caster || size.x<=0 || size.y<=0 || x-half<Left || x+half>Right ||
-                requested.y<Bottom || requested.y>Bottom+H*S) return false;
+            float half=size.x/2+S/2;
+            if(x-half<Left || x+half>Right) return false;
+
             float highest=float.NegativeInfinity,lowest=float.PositiveInfinity;
-            // Probe the CURRENT composite from clear sky. A finger may be slightly inside the
-            // visible surface; starting there produced fraction-zero 'hits' inside solid rock.
-            for(int i=0;i<5;i++)
+            for(int i=0;i<3;i++)
             {
-                if(!TopSurface(x+Mathf.Lerp(-size.x*.4f,size.x*.4f,i/4f),out var hit)) return false;
-                if(Mathf.Abs(hit.point.y-requested.y)>4 || hit.normal.y<.55f) return false;
-                highest=Mathf.Max(highest,hit.point.y); lowest=Mathf.Min(lowest,hit.point.y);
+                float sampleX=x+Mathf.Lerp(-size.x*.35f,size.x*.35f,i/2f);
+                if(!TopSurface(sampleX,out var hit) || hit.normal.y<.35f) return false;
+                highest=Mathf.Max(highest,hit.point.y);
+                lowest=Mathf.Min(lowest,hit.point.y);
             }
-            if(highest-lowest>S*2) return false; // No bridging trenches or steep sides.
+
+            // Permit ordinary slopes and crater lips, while still preventing a wall from
+            // bridging a large gap with no meaningful foundation.
+            if(highest-lowest>Mathf.Max(S*3,size.y*.65f)) return false;
+
             bottom=new Vector2(x,Bottom+Mathf.Ceil((highest-Bottom)/S)*S);
             if(Vector2.Distance(caster.transform.position,bottom)>range ||
                 bottom.y+size.y+S/2>Bottom+H*S) return false;
+
             var filter=new ContactFilter2D{useTriggers=false};
-            // The supporting surface is allowed in the foundation band, but no Summoner is.
-            int n=Physics2D.OverlapBox(bottom+Vector2.up*size.y/2,
-                new Vector2(size.x+S,size.y+S),0,filter,overlaps);
+            int n=Physics2D.OverlapBox(bottom+Vector2.up*(size.y*.5f+S*.35f),
+                new Vector2(size.x+S*.5f,Mathf.Max(.1f,size.y-S*.3f)),0,filter,overlaps);
             if(n==overlaps.Length) return false;
-            for(int i=0;i<n;i++) if(overlaps[i] && overlaps[i]!=composite && overlaps[i]!=tileCollider) return false;
-            float clearanceBottom=bottom.y+S/2+.02f;
-            float top=bottom.y+size.y+S/2;
-            n=Physics2D.OverlapBox(new Vector2(x,(clearanceBottom+top)/2),
-                new Vector2(size.x+S,top-clearanceBottom),0,filter,overlaps);
-            return n==0;
+            for(int i=0;i<n;i++)
+            {
+                var overlap=overlaps[i];
+                if(!overlap || overlap==composite || overlap==tileCollider) continue;
+                return false;
+            }
+            return true;
         }
         private bool TopSurface(float x,out RaycastHit2D surface)
         {
