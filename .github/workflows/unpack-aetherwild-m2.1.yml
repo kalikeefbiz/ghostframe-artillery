@@ -1,0 +1,157 @@
+name: Unpack AetherWild M2.1 production update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - AetherWild-M2.1-source.zip
+      - .github/workflows/unpack-aetherwild-m2.1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aetherwild-source-unpack-main
+  cancel-in-progress: false
+
+jobs:
+  unpack:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Detect transport ZIP
+        id: archive
+        shell: bash
+        run: |
+          if test -f AetherWild-M2.1-source.zip; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Upload AetherWild-M2.1-source.zip to repository root." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Validate and apply M2.1 while preserving production art
+        if: steps.archive.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, shutil, stat, subprocess, tempfile, zipfile
+          from pathlib import Path, PurePosixPath
+
+          root = Path.cwd()
+          archive = root / 'AetherWild-M2.1-source.zip'
+          expected = '9e2fcc7ee7f41d9ef2c5114737b1ce1ad6a980b119883f752aed21370ce7d467'
+          if hashlib.sha256(archive.read_bytes()).hexdigest() != expected:
+              raise SystemExit('Wrong ZIP for this workflow. Upload the matching production-update ZIP unchanged.')
+          allowed = {'Assets', 'Packages', 'ProjectSettings', 'Docs', 'Tools', 'README.md', '.gitignore'}
+          required = {'Assets/AetherWild/Scenes/Foundation.unity', 'Assets/AetherWild/Data/ProductionArt.asset',
+                      'Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt',
+                      'ProjectSettings/EditorBuildSettings.asset', 'Docs/M2.1-SOURCE-MANIFEST.json',
+                      'Docs/M2.1-ACCEPTANCE.md', 'Tools/verify_production.py', 'Tools/verify_source.py'}
+          def blob(data):
+              return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+          def safe_target(relative):
+              parts = PurePosixPath(relative).parts
+              if not parts or parts[0] not in allowed or '..' in parts:
+                  raise SystemExit('Unexpected source path: ' + relative)
+              target = root
+              for part in parts:
+                  target = target / part
+                  if target.is_symlink():
+                      raise SystemExit('Refusing symlink in source path: ' + relative)
+              return target
+          with tempfile.TemporaryDirectory(prefix='aetherwild-m21-') as temp:
+              stage = Path(temp)
+              with zipfile.ZipFile(archive) as z:
+                  infos = z.infolist()
+                  if len(infos) > 50000 or sum(i.file_size for i in infos) > 100 * 1024 * 1024:
+                      raise SystemExit('Unexpected source archive size.')
+                  names = set()
+                  for info in infos:
+                      path = PurePosixPath(info.filename)
+                      mode = info.external_attr >> 16
+                      if (not path.parts or path.is_absolute() or '..' in path.parts or '\\' in info.filename
+                              or ':' in info.filename or path.parts[0] not in allowed
+                              or stat.S_ISLNK(mode) or (mode and stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR))):
+                          raise SystemExit('Unsafe archive entry: ' + info.filename)
+                      if info.filename.casefold() in names:
+                          raise SystemExit('Duplicate archive entry: ' + info.filename)
+                      names.add(info.filename.casefold())
+                      safe_target(info.filename)
+                      destination = stage.joinpath(*path.parts)
+                      if info.is_dir():
+                          destination.mkdir(parents=True, exist_ok=True)
+                      else:
+                          destination.parent.mkdir(parents=True, exist_ok=True)
+                          destination.write_bytes(z.read(info))
+              for name in required:
+                  if not (stage / name).is_file():
+                      raise SystemExit('Missing required source: ' + name)
+              for name in ('Assets', 'Packages', 'ProjectSettings', 'Docs'):
+                  if not (stage / name).is_dir():
+                      raise SystemExit('Missing project directory: ' + name)
+              manifest = json.loads((stage / 'Docs/M2.1-SOURCE-MANIFEST.json').read_text())
+              for source in stage.rglob('*'):
+                  if source.is_file():
+                      relative = source.relative_to(stage).as_posix()
+                      current = safe_target(relative)
+                      if (relative not in manifest['baseline_blobs'] and current.exists()
+                              and (not current.is_file() or current.read_bytes() != source.read_bytes())):
+                          raise SystemExit('Conflicting new source on main: ' + relative)
+              # Refuse to overwrite work committed after the baseline unless it is already this update.
+              for name, original in manifest['baseline_blobs'].items():
+                  current = safe_target(name)
+                  update = stage / name
+                  accepted = {original}
+                  if update.is_file():
+                      accepted.add(blob(update.read_bytes()))
+                  if not current.is_file() or blob(current.read_bytes()) not in accepted:
+                      raise SystemExit('Main has changed or is missing baseline source: ' + name)
+              # PNGs are already committed. Verify and stage exact bytes for validation; never replace them.
+              for name, original in manifest['production_pngs'].items():
+                  current = safe_target(name)
+                  if blob(current.read_bytes()) != original:
+                      raise SystemExit('Authoritative production PNG changed: ' + name)
+                  destination = stage / name
+                  if destination.exists():
+                      raise SystemExit('This small update must not contain production PNG replacements.')
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copy2(current, destination)
+              subprocess.run(['python3', str(stage / 'Tools/verify_production.py'), str(stage)], check=True)
+              # Overlay source files only. No directory removal; Git, Actions and art stay intact.
+              for source in sorted(stage.rglob('*')):
+                  if not source.is_file():
+                      continue
+                  relative = source.relative_to(stage).as_posix()
+                  if relative in manifest['production_pngs']:
+                      continue
+                  target = safe_target(relative)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as output:
+                      pending = Path(output.name)
+                      output.write(source.read_bytes())
+                  pending.replace(target)
+              archive.unlink()
+          print('M2.1 source applied; .git, .github and all 28 production PNGs preserved.')
+          PY
+      - name: Commit and push M2.1 source to main
+        if: steps.archive.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- Assets Packages ProjectSettings Docs Tools README.md .gitignore AetherWild-M2.1-source.zip
+          if git diff --cached --quiet; then
+            echo "No source changes to commit." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "Fix AetherWild M2.1 acceptance issues and integrate production art"
+          git push origin HEAD:main
+          echo "M2.1 committed to main: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
