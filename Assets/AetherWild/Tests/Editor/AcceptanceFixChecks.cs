@@ -20,9 +20,9 @@ namespace AetherWild.Editor
                 var terrain=match.Terrain;
                 var player=match.Player;
                 var sigil=player.Loadout.Get(3);
-                Vector2 target=new Vector2(-16.75f,1);
+                Vector2 target=new Vector2(-9.5f,1);
                 Require(terrain.WallPosition(target,player,sigil.targetingRange,sigil.wallSize,out var bottom),
-                    "Wall must accept a free part of the left spawn shelf.");
+                    "Wall must accept a free in-range terrain surface.");
                 Require(!terrain.WallPosition(player.transform.position,player,sigil.targetingRange,sigil.wallSize,out _),
                     "Wall must reject overlap with its caster.");
                 Require(!terrain.WallPosition(match.Enemy.transform.position,player,100,sigil.wallSize,out _),
