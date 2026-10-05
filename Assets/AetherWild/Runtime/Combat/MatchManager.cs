@@ -20,9 +20,31 @@ namespace AetherWild
         private float settleTime;
         private bool pendingResolution;
         private System.Random aiRandom = new System.Random(1729);
+        private ResoAnchor playerReso,enemyReso;
+        public SigilDefinition[] Library => Player && Player.Definition.sigilLibrary!=null
+            ? Player.Definition.sigilLibrary : System.Array.Empty<SigilDefinition>();
         public void Select(int slot)
         {
-            if(PlayerCanAct && Player.Loadout.Available(slot)) { SelectedSlot=slot; StateChanged?.Invoke(); }
+            if(PlayerCanAct && CanUseSlot(Side.Player,slot)) { SelectedSlot=slot; StateChanged?.Invoke(); }
+        }
+        public bool EquipPlayerSlot(int slot,int libraryIndex)
+        {
+            if(!InMenu || slot<0 || slot>=Player.Loadout.Count || libraryIndex<0 || libraryIndex>=Library.Length) return false;
+            Player.EquipSlot(slot,Library[libraryIndex]);
+            SelectedSlot=Mathf.Clamp(SelectedSlot,0,Player.Loadout.Count-1);
+            StateChanged?.Invoke();
+            return true;
+        }
+        public bool IsRecallReady(Side side,int slot)
+        {
+            var caster=side==Side.Player?Player:Enemy;
+            var anchor=side==Side.Player?playerReso:enemyReso;
+            return anchor && anchor.Owner==caster && anchor.Slot==slot && Turns.TurnNumber<=anchor.ExpireTurn;
+        }
+        public bool CanUseSlot(Side side,int slot)
+        {
+            var caster=side==Side.Player?Player:Enemy;
+            return caster && (caster.Loadout.Available(slot) || IsRecallReady(side,slot));
         }
         public bool HopAllowed()
         {
@@ -52,6 +74,8 @@ namespace AetherWild
         }
         private void OnTurnChanged()
         {
+            MirrorField.RemoveExpired(Turns.TurnNumber);
+            ExpireResoAnchors();
             Player.Movement.ClearInput();
             Enemy.Movement.ClearInput();
             aiWait = 1.1f;
@@ -111,31 +135,65 @@ namespace AetherWild
                 || float.IsInfinity(target.x) || float.IsInfinity(target.y)) return false;
             var caster = side == Side.Player ? Player : Enemy;
             var sigil = caster.Loadout.Get(slot);
-            if (!sigil || !caster.Loadout.Available(slot)) return false;
+            if (!sigil || !CanUseSlot(side,slot)) return false;
             var opponent = side == Side.Player ? Enemy : Player;
+
+            if(sigil.behavior==SigilBehavior.ResoRecall && IsRecallReady(side,slot))
+            {
+                if(!Turns.BeginCast(side)) return false;
+                SigilCast?.Invoke(caster,direction);
+                RecallReso(side,sigil);
+                QueueResolution(); StateChanged?.Invoke(); return true;
+            }
+
             Vector2 validTarget = target;
             Vector2 wallSize = sigil.wallSize * caster.Bonus(sigil,"terrain");
-            if(sigil.form == SigilForm.Construct &&
+            if(sigil.behavior==SigilBehavior.Mirror)
+            {
+                if(direction.sqrMagnitude<.01f ||
+                    !Terrain.AnchorPosition(target,caster,sigil.targetingRange,out validTarget)) return false;
+            }
+            else if(sigil.behavior==SigilBehavior.BulwarkRise)
+            {
+                if(!Terrain.WallPosition(target,caster,sigil.targetingRange,wallSize,out validTarget)) return false;
+            }
+            else if(sigil.form == SigilForm.Construct &&
                 !Terrain.WallPosition(target,caster,sigil.targetingRange,wallSize,out validTarget)) return false;
-            if(sigil.form == SigilForm.Shift &&
+
+            if(sigil.form == SigilForm.Shift && sigil.behavior!=SigilBehavior.EmberStep &&
                 !Terrain.Standing(target,caster,opponent,sigil.displacementDistance * caster.Bonus(sigil,"movement"),out validTarget)) return false;
+
             if (!Turns.BeginCast(side)) return false;
             caster.Loadout.Spend(slot);
             SigilCast?.Invoke(caster,direction);
             if(!sigil.usesProjectile)
             {
-                if(sigil.form == SigilForm.Ward) caster.Health.GrantShield(Mathf.RoundToInt(sigil.shieldAmount*caster.Bonus(sigil,"shield")));
-                else if(sigil.form == SigilForm.Shift) caster.Movement.ResetPosition(validTarget);
-                else if(sigil.form == SigilForm.Construct) Terrain.CreateWall(validTarget,wallSize);
+                if(sigil.behavior==SigilBehavior.Mirror)
+                    MirrorField.Create(validTarget,direction,Turns.TurnNumber,Mathf.Max(1,sigil.persistentTurns));
+                else if(sigil.behavior==SigilBehavior.BulwarkRise)
+                    Terrain.CreateBulwarks(validTarget,wallSize);
+                else if(sigil.behavior==SigilBehavior.EmberStep)
+                    caster.Movement.Launch(direction.normalized*sigil.Speed(power));
+                else if(sigil.form == SigilForm.Ward)
+                    caster.Health.GrantShield(Mathf.RoundToInt(sigil.shieldAmount*caster.Bonus(sigil,"shield")));
+                else if(sigil.form == SigilForm.Shift)
+                    caster.Movement.ResetPosition(validTarget);
+                else if(sigil.form == SigilForm.Construct)
+                    Terrain.CreateWall(validTarget,wallSize);
                 QueueResolution(); StateChanged?.Invoke(); return true;
             }
             int castGeneration = generation;
             var go = new GameObject("Sigil projectile", typeof(SpriteRenderer), typeof(ProjectileController));
             var visual = go.GetComponent<SpriteRenderer>();
-            visual.sprite = projectileSprite;
-            visual.color = new Color(0.68f, 0.89f, 1);
+            visual.sprite = sigil.icon ? sigil.icon : projectileSprite;
+            visual.color = Color.white;
             visual.sortingOrder = 5;
-            go.transform.localScale = Vector3.one * sigil.collisionRadius * 2;
+            if(sigil.icon)
+            {
+                float longest=Mathf.Max(.01f,Mathf.Max(sigil.icon.bounds.size.x,sigil.icon.bounds.size.y));
+                go.transform.localScale=Vector3.one*(.72f/longest);
+            }
+            else go.transform.localScale = Vector3.one * sigil.collisionRadius * 2;
             projectile = go.GetComponent<ProjectileController>();
             projectile.Initialize(caster, sigil, direction, power, (hit, point) =>
             {
@@ -143,6 +201,10 @@ namespace AetherWild
                 projectile = null;
                 var victim = hit ? hit.GetComponentInParent<SummonerCombat>() : null;
                 ResolveEffect(caster,sigil,victim,point);
+                if(sigil.behavior==SigilBehavior.Rootcaller)
+                    Terrain.CreateRootMound(point,sigil.wallSize.x,sigil.wallSize.y);
+                if(sigil.behavior==SigilBehavior.ResoRecall)
+                    SetResoAnchor(side,slot,point,sigil);
                 Impact?.Invoke(point);
                 if (Player.Health.Defeated || Enemy.Health.Defeated)
                 {
@@ -212,6 +274,8 @@ namespace AetherWild
         }
         public void Rematch()
         {
+            MirrorField.ClearAll();
+            ClearResoAnchors();
             if(Terrain) Terrain.ResetTerrain();
             pendingResolution=false;
             aiRandom=new System.Random(1729);
@@ -225,6 +289,63 @@ namespace AetherWild
             Physics2D.SyncTransforms();
             Turns.Reset();
         }
+        private void SetResoAnchor(Side side,int slot,Vector2 point,SigilDefinition sigil)
+        {
+            var existing=side==Side.Player?playerReso:enemyReso;
+            if(existing) Destroy(existing.gameObject);
+            var caster=side==Side.Player?Player:Enemy;
+            var anchor=ResoAnchor.Create(caster,slot,point,Turns.TurnNumber+Mathf.Max(2,sigil.persistentTurns*2),sigil.icon);
+            if(side==Side.Player) playerReso=anchor; else enemyReso=anchor;
+        }
+        private void RecallReso(Side side,SigilDefinition sigil)
+        {
+            var anchor=side==Side.Player?playerReso:enemyReso;
+            var caster=side==Side.Player?Player:Enemy;
+            var opponent=side==Side.Player?Enemy:Player;
+            if(!anchor) return;
+            Vector2 start=anchor.Point;
+            Vector2 end=caster.transform.position;
+            Vector2 delta=end-start;
+            float distance=delta.magnitude;
+            if(distance>.01f)
+            {
+                var hit=Physics2D.Raycast(start+delta.normalized*.18f,delta.normalized,Mathf.Max(0,distance-.2f));
+                if(hit.collider && hit.collider.GetComponent<UnityEngine.Tilemaps.Tilemap>()) end=hit.point;
+                if(DistanceToSegment(opponent.transform.position,start,end)<.55f)
+                {
+                    opponent.Health.Damage(Mathf.Max(0,sigil.secondaryDamage));
+                    opponent.Movement.ApplyKnockback((end-start).normalized*2.2f+Vector2.up*.35f);
+                }
+                var line=new GameObject("Reso recall path",typeof(LineRenderer)).GetComponent<LineRenderer>();
+                line.positionCount=2;line.SetPositions(new[]{(Vector3)start,(Vector3)end});
+                line.startWidth=line.endWidth=.11f;
+                line.startColor=line.endColor=new Color(.4f,.9f,1,1);
+                line.material=new Material(Shader.Find("Sprites/Default"));
+                line.sortingOrder=7;
+                Destroy(line.gameObject,.22f);
+            }
+            Destroy(anchor.gameObject);
+            if(side==Side.Player) playerReso=null; else enemyReso=null;
+        }
+        private static float DistanceToSegment(Vector2 p,Vector2 a,Vector2 b)
+        {
+            Vector2 ab=b-a;
+            if(ab.sqrMagnitude<.0001f) return Vector2.Distance(p,a);
+            float t=Mathf.Clamp01(Vector2.Dot(p-a,ab)/ab.sqrMagnitude);
+            return Vector2.Distance(p,a+ab*t);
+        }
+        private void ExpireResoAnchors()
+        {
+            if(playerReso && Turns.TurnNumber>playerReso.ExpireTurn){Destroy(playerReso.gameObject);playerReso=null;}
+            if(enemyReso && Turns.TurnNumber>enemyReso.ExpireTurn){Destroy(enemyReso.gameObject);enemyReso=null;}
+        }
+        private void ClearResoAnchors()
+        {
+            if(playerReso) Destroy(playerReso.gameObject);
+            if(enemyReso) Destroy(enemyReso.gameObject);
+            playerReso=enemyReso=null;
+        }
+
         private void OnDestroy()
         {
             generation++;
