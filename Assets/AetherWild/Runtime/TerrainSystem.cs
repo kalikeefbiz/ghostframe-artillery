@@ -230,6 +230,17 @@ namespace AetherWild
             return Mathf.Abs(anchor.x-caster.transform.position.x)<=range;
         }
 
+        public bool FreePosition(Vector2 requested,SummonerCombat caster,float range,out Vector2 point)
+        {
+            point=requested;
+            if(!caster) return false;
+            float top=Bottom+H*S;
+            if(requested.x<Left+.4f || requested.x>Right-.4f || requested.y<Bottom+.4f || requested.y>top-.4f)
+                return false;
+            if(range>0 && Vector2.Distance(caster.transform.position,requested)>range) return false;
+            return true;
+        }
+
         public void CreateRootMound(Vector2 around,float width,float height)
         {
             if(width<=0 || height<=0) return;
@@ -311,7 +322,9 @@ namespace AetherWild
             float bx=(W*S-bw)/2,by=H*S+4-bh;
             backgroundMesh.vertices=new[]{new Vector3(bx,by,3),new Vector3(bx+bw,by,3),
                 new Vector3(bx+bw,by+bh,3),new Vector3(bx,by+bh,3)};
-            backgroundMesh.uv=new[]{Vector2.zero,Vector2.right,Vector2.one,Vector2.up};
+            // Sample only the upper scenic portion of the source art so the foreground mountain
+            // is not duplicated behind the playable central arch.
+            backgroundMesh.uv=new[]{new Vector2(0,.58f),new Vector2(1,.58f),Vector2.one,new Vector2(0,1)};
             backgroundMesh.triangles=new[]{0,2,1,0,3,2};backgroundMesh.RecalculateBounds();
             background.GetComponent<MeshFilter>().sharedMesh=backgroundMesh;
             backgroundMaterial=new Material(Map.mapShader);
