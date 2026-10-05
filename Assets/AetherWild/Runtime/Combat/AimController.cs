@@ -9,6 +9,7 @@ namespace AetherWild
         private MatchManager match;
         private int? pointer;
         private Vector2 start;
+        private Vector2 targetStart;
         private SpriteRenderer vector;
         private LineRenderer placement, placementOutline;
         private readonly SpriteRenderer[] dots = new SpriteRenderer[14];
@@ -20,10 +21,15 @@ namespace AetherWild
             get
             {
                 var s=match.Player.Loadout.Get(match.SelectedSlot);
-                if(s.form==SigilForm.Construct) return match.Terrain.WallPosition(Target,match.Player,s.targetingRange,
-                    s.wallSize*match.Player.Bonus(s,"terrain"),out _);
-                if(s.form==SigilForm.Shift) return match.Terrain.Standing(Target,match.Player,match.Enemy,
-                    s.displacementDistance*match.Player.Bonus(s,"movement"),out _);
+                if(match.IsRecallReady(Side.Player,match.SelectedSlot)) return true;
+                if(s.behavior==SigilBehavior.Mirror)
+                    return Direction.sqrMagnitude>.01f && match.Terrain.AnchorPosition(Target,match.Player,s.targetingRange,out _);
+                if(s.behavior==SigilBehavior.BulwarkRise || s.form==SigilForm.Construct)
+                    return match.Terrain.WallPosition(Target,match.Player,s.targetingRange,
+                        s.wallSize*match.Player.Bonus(s,"terrain"),out _);
+                if(s.form==SigilForm.Shift && s.behavior!=SigilBehavior.EmberStep)
+                    return match.Terrain.Standing(Target,match.Player,match.Enemy,
+                        s.displacementDistance*match.Player.Bonus(s,"movement"),out _);
                 return true;
             }
         }
@@ -73,16 +79,26 @@ namespace AetherWild
             if (!match.PlayerCanAct || pointer.HasValue) return;
             pointer = e.pointerId;
             start = e.position;
-            Target=Camera.main.ScreenToWorldPoint(e.position);
+            targetStart=Camera.main.ScreenToWorldPoint(e.position);
+            Target=targetStart;
         }
         public void OnDrag(PointerEventData e)
         {
             if (pointer != e.pointerId || !match.PlayerCanAct) return;
-            Target=Camera.main.ScreenToWorldPoint(e.position);
-            if(!match.Player.Loadout.Get(match.SelectedSlot).usesProjectile) return;
+            var sigil=match.Player.Loadout.Get(match.SelectedSlot);
+            Vector2 world=Camera.main.ScreenToWorldPoint(e.position);
+            if(sigil.behavior==SigilBehavior.Mirror)
+            {
+                Target=targetStart;
+                Vector2 facing=world-targetStart;
+                if(facing.sqrMagnitude>.04f) Direction=facing.normalized;
+                return;
+            }
+            Target=world;
+            bool ballistic=sigil.usesProjectile || sigil.behavior==SigilBehavior.EmberStep;
+            if(!ballistic) return;
             Vector2 drag = e.position - start;
             if (drag.magnitude < 8) return;
-            var sigil = match.Player.Loadout.Get(match.SelectedSlot);
             Direction = drag.normalized;
             float fullDrag = Mathf.Max(80, Mathf.Min(Screen.width, Screen.height) * 0.36f);
             Power = Mathf.Lerp(sigil.launchPowerMin, sigil.launchPowerMax, Mathf.Clamp01(drag.magnitude / fullDrag));
@@ -97,7 +113,8 @@ namespace AetherWild
             placement.enabled=placementOutline.enabled=false;
             if (!visible) { CancelDrag(); return; }
             var sigil = match.Player.Loadout.Get(match.SelectedSlot);
-            if(!sigil.usesProjectile)
+            bool ballistic=sigil.usesProjectile || sigil.behavior==SigilBehavior.EmberStep;
+            if(!ballistic)
             {
                 foreach(var dot in dots) dot.gameObject.SetActive(false);
                 vector.gameObject.SetActive(sigil.form!=SigilForm.Ward);
@@ -106,7 +123,20 @@ namespace AetherWild
                 vector.transform.localScale=new Vector3(.7f,.22f,1);
                 bool valid=TargetValid;
                 vector.color=valid?new Color(.25f,1,.35f):new Color(1,.2f,.18f);
-                if(sigil.form==SigilForm.Construct)
+                if(sigil.behavior==SigilBehavior.Mirror)
+                {
+                    match.Terrain.AnchorPosition(Target,match.Player,sigil.targetingRange,out var anchor);
+                    if(!valid) anchor=Target;
+                    Vector2 tangent=Direction.sqrMagnitude>.01f?Direction.normalized:Vector2.up;
+                    Vector2 center=anchor+Vector2.up*1.25f;
+                    Vector2 normal=new Vector2(-tangent.y,tangent.x)*.08f;
+                    var corners=new[]{(Vector3)(center-tangent*1.35f-normal),(Vector3)(center+tangent*1.35f-normal),
+                        (Vector3)(center+tangent*1.35f+normal),(Vector3)(center-tangent*1.35f+normal)};
+                    placement.SetPositions(corners);placementOutline.SetPositions(corners);
+                    placement.startColor=placement.endColor=vector.color;
+                    placement.enabled=placementOutline.enabled=true;
+                }
+                else if(sigil.form==SigilForm.Construct || sigil.behavior==SigilBehavior.BulwarkRise)
                 {
                     Vector2 size=sigil.wallSize*match.Player.Bonus(sigil,"terrain");
                     match.Terrain.WallPosition(Target,match.Player,sigil.targetingRange,size,out var bottom);
