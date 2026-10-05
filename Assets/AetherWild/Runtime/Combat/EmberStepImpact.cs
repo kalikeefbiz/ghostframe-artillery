@@ -22,9 +22,12 @@ namespace AetherWild
 
         private void FixedUpdate(){age+=Time.fixedDeltaTime;}
 
-        private void OnCollisionEnter2D(Collision2D collision)
+        private void OnCollisionEnter2D(Collision2D collision) => HandleCollision(collision);
+        private void OnCollisionStay2D(Collision2D collision) => HandleCollision(collision);
+
+        private void HandleCollision(Collision2D collision)
         {
-            if(age<.08f || !sigil) return;
+            if(age<.03f || !sigil || !owner) return;
             var summoner=collision.collider.GetComponentInParent<SummonerCombat>();
             if(!hitOpponent && summoner && summoner==opponent)
             {
@@ -35,10 +38,22 @@ namespace AetherWild
             }
             if(!hitTerrain && collision.collider.GetComponent<Tilemap>() && collision.contactCount>0)
             {
-                hitTerrain=true;
+                var body=owner.GetComponent<Rigidbody2D>();
+                bool drivingIntoSurface=false;
                 Vector2 point=collision.GetContact(0).point;
-                if(impactSprite) SigilPresentation.Burst(impactSprite,point+Vector2.up*.35f,3.2f,.28f);
-                terrain.DestroyCircle(point,Mathf.Max(.35f,sigil.terrainDamageRadius));
+                for(int i=0;i<collision.contactCount;i++)
+                {
+                    var contact=collision.GetContact(i);
+                    if(body && Vector2.Dot(body.linearVelocity,contact.normal)<-.15f)
+                    { drivingIntoSurface=true;point=contact.point;break; }
+                }
+                if(drivingIntoSurface || age>.1f)
+                {
+                    hitTerrain=true;
+                    if(impactSprite) SigilPresentation.Burst(impactSprite,point+Vector2.up*.35f,3.2f,.28f);
+                    terrain.DestroyCircle(point,Mathf.Max(.35f,sigil.terrainDamageRadius));
+                    owner.Movement.EndLaunch(true);
+                }
             }
             if(hitTerrain) Destroy(this);
         }
