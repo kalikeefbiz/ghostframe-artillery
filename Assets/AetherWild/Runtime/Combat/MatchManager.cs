@@ -153,7 +153,7 @@ namespace AetherWild
             if(sigil.behavior==SigilBehavior.Mirror)
             {
                 if(direction.sqrMagnitude<.01f ||
-                    !Terrain.AnchorPosition(target,caster,sigil.targetingRange,out validTarget)) return false;
+                    !Terrain.FreePosition(target,caster,sigil.targetingRange,out validTarget)) return false;
             }
             else if(sigil.behavior==SigilBehavior.BulwarkRise)
             {
@@ -175,7 +175,7 @@ namespace AetherWild
                         art?art.mirrorPlaced:null,art?art.mirrorRedirect:null);
                 else if(sigil.behavior==SigilBehavior.BulwarkRise)
                 {
-                    if(art) SigilPresentation.Burst(art.bulwarkRiseEruption,validTarget+Vector2.up*.9f,4.6f,.32f);
+                    if(art) SigilPresentation.Persistent(art.bulwarkRiseEruption,validTarget+Vector2.up*.85f,4.8f,4);
                     Terrain.CreateBulwarks(validTarget,wallSize);
                 }
                 else if(sigil.behavior==SigilBehavior.EmberStep)
@@ -217,7 +217,7 @@ namespace AetherWild
                 ResolveEffect(caster,sigil,victim,point);
                 if(hit && sigil.behavior==SigilBehavior.Rootcaller)
                 {
-                    if(art) SigilPresentation.Burst(art.rootCallerEruption,point+Vector2.up*.75f,4.2f,.34f);
+                    if(art) SigilPresentation.Persistent(art.rootCallerEruption,point+Vector2.up*.65f,4.1f,4);
                     Terrain.CreateRootMound(point,sigil.wallSize.x,sigil.wallSize.y);
                 }
                 if(hit && sigil.behavior==SigilBehavior.ResoRecall)
@@ -292,6 +292,7 @@ namespace AetherWild
         public void Rematch()
         {
             MirrorField.ClearAll();
+            SigilPresentation.ClearPersistent();
             ClearResoAnchors();
             if(Terrain) Terrain.ResetTerrain();
             pendingResolution=false;
