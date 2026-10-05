@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
   m_Name: EmberStep
   m_EditorClassIdentifier:
-  id: starter.emberstep
+  id: m3.emberstep
   displayName: Ember Step
   school: 2
   form: 3
@@ -22,7 +22,7 @@ MonoBehaviour:
   unlimitedUses: 0
   usesProjectile: 0
   projectileSpeed: 11
-  gravityScale: 1
+  gravityScale: 1.5
   launchPowerMin: 0.55
   launchPowerMax: 1
   collisionRadius: 0.18
