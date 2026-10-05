@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
   m_Name: MirrorSigil
   m_EditorClassIdentifier:
-  id: starter.mirrorsigil
+  id: m3.mirrorsigil
   displayName: Mirror Sigil
   school: 7
   form: 6
