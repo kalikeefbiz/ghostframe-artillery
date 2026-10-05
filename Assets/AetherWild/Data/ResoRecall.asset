@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
   m_Name: ResoRecall
   m_EditorClassIdentifier:
-  id: starter.resorecall
+  id: m3.resorecall
   displayName: Reso Recall
   school: 4
   form: 0
