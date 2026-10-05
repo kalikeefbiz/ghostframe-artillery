@@ -32,7 +32,20 @@ if [[ -f "$HOME/.profile" ]]; then
   source "$HOME/.profile" || true
 fi
 
-echo "[AetherWild] Player path: $UNITY_PLAYER_PATH"
+PLAYER_PATH="$UNITY_PLAYER_PATH"
+# Unity Build Automation runs these hooks as bash even on Windows builders.
+# UNITY_PLAYER_PATH is a Cygwin-style path on Windows; Wrangler ultimately runs
+# under Node, so pass it a native Windows path there.
+if [[ "${BUILDER_OS:-}" == "WINDOWS" ]]; then
+  if ! command -v cygpath >/dev/null 2>&1; then
+    echo "ERROR: Windows builder detected but cygpath is unavailable."
+    exit 1
+  fi
+  PLAYER_PATH="$(cygpath -wa "$UNITY_PLAYER_PATH")"
+fi
+
+echo "[AetherWild] Builder OS: ${BUILDER_OS:-unknown}"
+echo "[AetherWild] Player path: $PLAYER_PATH"
 echo "[AetherWild] Pages project: $CLOUDFLARE_PAGES_PROJECT"
 
 # Unity WebGL Brotli/Gzip artifacts need explicit MIME + encoding headers on static hosts.
@@ -79,7 +92,7 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
 fi
 
 echo "[AetherWild] Deploying WebGL output to Cloudflare Pages..."
-npx --yes wrangler@latest pages deploy "$UNITY_PLAYER_PATH" \
+npx --yes wrangler@latest pages deploy "$PLAYER_PATH" \
   --project-name "$CLOUDFLARE_PAGES_PROJECT" \
   --branch main
 
