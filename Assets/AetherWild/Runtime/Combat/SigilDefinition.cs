@@ -12,6 +12,10 @@ namespace AetherWild
         public SigilForm form;
         public SummonerClass classAffinity;
         public SigilBehavior behavior;
+        [Header("Library organization")]
+        public int tier;
+        public string branch;
+        public string parentSigilId;
         [Header("Match resources")]
         public int maxUses;
         public bool unlimitedUses;
