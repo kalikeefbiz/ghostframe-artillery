@@ -220,6 +220,53 @@ namespace AetherWild
             return false;
         }
 
+        public bool AnchorPosition(Vector2 requested,SummonerCombat caster,float range,out Vector2 anchor)
+        {
+            anchor=default;
+            if(!caster || requested.x<Left+.5f || requested.x>Right-.5f) return false;
+            float x=Left+Mathf.Round((requested.x-Left)/S)*S;
+            if(!GridTop(x,out float y)) return false;
+            anchor=new Vector2(x,y);
+            return Mathf.Abs(anchor.x-caster.transform.position.x)<=range;
+        }
+
+        public void CreateRootMound(Vector2 around,float width,float height)
+        {
+            if(width<=0 || height<=0) return;
+            if(!GridTop(around.x,out float baseY)) baseY=around.y;
+            float half=Mathf.Max(S,width*.5f);
+            for(int x=0;x<=W;x++) for(int y=0;y<=H;y++)
+            {
+                var p=Center(x,y);
+                float nx=Mathf.Abs(p.x-around.x)/half;
+                if(nx>1) continue;
+                float top=baseY+height*(1-nx*nx);
+                if(p.y>=baseY-S*.35f && p.y<=top) solid[x,y]=true;
+            }
+            Refresh();
+        }
+
+        public void CreateBulwarks(Vector2 around,Vector2 size)
+        {
+            if(size.x<=0 || size.y<=0) return;
+            if(!GridTop(around.x,out float baseY)) baseY=around.y;
+            float ridgeWidth=Mathf.Max(S,size.x*.24f);
+            float gap=Mathf.Max(S,size.x*.28f);
+            float leftCenter=around.x-gap*.5f-ridgeWidth*.5f;
+            float rightCenter=around.x+gap*.5f+ridgeWidth*.5f;
+            for(int x=0;x<=W;x++) for(int y=0;y<=H;y++)
+            {
+                var p=Center(x,y);
+                float dl=Mathf.Abs(p.x-leftCenter)/ridgeWidth;
+                float dr=Mathf.Abs(p.x-rightCenter)/ridgeWidth;
+                float d=Mathf.Min(dl,dr);
+                if(d>1) continue;
+                float top=baseY+size.y*(1-.35f*d);
+                if(p.y>=baseY-S*.35f && p.y<=top) solid[x,y]=true;
+            }
+            Refresh();
+        }
+
         private bool TopSurface(float x,out RaycastHit2D surface)
         {
             surface=default;
