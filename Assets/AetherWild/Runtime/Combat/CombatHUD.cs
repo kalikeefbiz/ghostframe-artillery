@@ -25,7 +25,7 @@ namespace AetherWild
         private RectTransform mainRoot, loadoutRoot, resultRoot;
         private Image menuTitle;
         private Text resultText, loadoutHeader, loadoutDetail, resonanceText, emptySchool;
-        private Button playButton, loadoutButton, backButton, rematchButton;
+        private Button playButton, loadoutButton, backButton, rematchButton, resultMenuButton;
         private readonly Button[] schoolButtons=new Button[8];
         private readonly Image[] schoolSkins=new Image[8];
         private Button[] libraryButtons;
@@ -155,9 +155,12 @@ namespace AetherWild
             resultRoot=Group(overlayPanel,"Result menu");
             resultText=Label(resultRoot,38);
             Place(resultText.rectTransform,Vector2.one*.5f,new Vector2(0,45),new Vector2(380,90));
-            rematchButton=Button(resultRoot,"REMATCH",Vector2.one*.5f,new Vector2(0,-55),new Vector2(220,80));
+            rematchButton=Button(resultRoot,"REMATCH",Vector2.one*.5f,new Vector2(-118,-55),new Vector2(205,72));
             SkinButton(rematchButton,art.primaryButton);
             rematchButton.onClick.AddListener(()=>{aim.ResetAim();match.Rematch();});
+            resultMenuButton=Button(resultRoot,"MAIN MENU",Vector2.one*.5f,new Vector2(118,-55),new Vector2(205,72));
+            SkinButton(resultMenuButton,art.secondaryButton);
+            resultMenuButton.onClick.AddListener(()=>{aim.ResetAim();match.ReturnToMenu();ShowMainMenu();});
 
             mainRoot.gameObject.SetActive(false);
             loadoutRoot.gameObject.SetActive(false);
