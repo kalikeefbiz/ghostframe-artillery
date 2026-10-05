@@ -10,6 +10,11 @@ namespace AetherWild
         public Sprite maeIdle, maeWalkA, maeWalkB, maeCast, maeHit, maeDefeat;
         public Sprite healthFrame, shieldFrame, hudPanel, primaryButton, secondaryButton;
         public Sprite sigilSlot, sigilSelected, title;
+        public Sprite mirrorPlaced, mirrorRedirect;
+        public Sprite rootCallerProjectile, rootCallerEruption;
+        public Sprite resoBladeProjectile, resoBladePlaced, resoBladeRecall;
+        public Sprite bulwarkRiseEruption;
+        public Sprite emberStepLaunch, emberStepImpact;
 
         // Decorative child only: the existing rectangular Graphic keeps the whole touch target.
         public static Image Skin(Graphic target,Sprite sprite,bool sliced=true)
