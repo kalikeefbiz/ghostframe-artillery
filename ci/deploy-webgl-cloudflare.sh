@@ -25,6 +25,13 @@ fi
 
 CLOUDFLARE_PAGES_PROJECT="${CLOUDFLARE_PAGES_PROJECT:-aetherwild}"
 
+# Unity Build Automation documents NVM as available on build machines.
+# Source the profile so node/npm installed by the image are on PATH.
+if [[ -f "$HOME/.profile" ]]; then
+  # shellcheck disable=SC1090
+  source "$HOME/.profile" || true
+fi
+
 echo "[AetherWild] Player path: $UNITY_PLAYER_PATH"
 echo "[AetherWild] Pages project: $CLOUDFLARE_PAGES_PROJECT"
 
