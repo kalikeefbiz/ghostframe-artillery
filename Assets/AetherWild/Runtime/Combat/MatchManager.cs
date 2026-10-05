@@ -173,7 +173,10 @@ namespace AetherWild
                 else if(sigil.behavior==SigilBehavior.BulwarkRise)
                     Terrain.CreateBulwarks(validTarget,wallSize);
                 else if(sigil.behavior==SigilBehavior.EmberStep)
+                {
+                    caster.gameObject.AddComponent<EmberStepImpact>().Initialize(caster,opponent,Terrain,sigil);
                     caster.Movement.Launch(direction.normalized*sigil.Speed(power));
+                }
                 else if(sigil.form == SigilForm.Ward)
                     caster.Health.GrantShield(Mathf.RoundToInt(sigil.shieldAmount*caster.Bonus(sigil,"shield")));
                 else if(sigil.form == SigilForm.Shift)
