@@ -11,6 +11,7 @@ namespace AetherWild
         public SigilSchool school;
         public SigilForm form;
         public SummonerClass classAffinity;
+        public SigilBehavior behavior;
         [Header("Match resources")]
         public int maxUses;
         public bool unlimitedUses;
@@ -23,6 +24,7 @@ namespace AetherWild
         public float collisionRadius = 0.16f;
         [Header("Damage")]
         public int baseDamage;
+        public int secondaryDamage;
         public float splashRadius;
         public bool damageFalloff;
         public float knockbackForce;
@@ -33,6 +35,7 @@ namespace AetherWild
         [Header("Defense / movement (metadata only in M1)")]
         public int shieldAmount;
         public float displacementDistance;
+        public int persistentTurns;
         public float targetingRange = 7;
         public Vector2 wallSize = new Vector2(1.5f, 2.5f);
         [Header("Resonance (metadata only; threshold is 75% of equipped loadout)")]
