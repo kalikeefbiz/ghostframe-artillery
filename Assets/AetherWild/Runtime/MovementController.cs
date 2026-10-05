@@ -13,6 +13,9 @@ namespace AetherWild
         private float speed;
         private float hopSpeed;
         private float impulseX;
+        private bool launching;
+        private float launchAge;
+        public bool IsLaunching => launching;
 
         public void Initialize(float moveSpeed, float jumpSpeed)
         {
@@ -26,13 +29,23 @@ namespace AetherWild
             hopSpeed = jumpSpeed;
         }
 
-        public void SetDirection(float value) => direction = Mathf.Clamp(value, -1, 1);
-        public void RequestHop() => hop = true;
+        public void SetDirection(float value)
+        {
+            if(launching) return;
+            direction = Mathf.Clamp(value, -1, 1);
+        }
+        public void RequestHop() { if(!launching) hop = true; }
         public void ClearInput() { direction = 0; hop = false; }
 
         private void FixedUpdate()
         {
             if (!body) return;
+            if(launching)
+            {
+                launchAge+=Time.fixedDeltaTime;
+                if(launchAge>3f) EndLaunch(false);
+                return;
+            }
             var velocity = body.linearVelocity;
             velocity.x = direction * speed + impulseX;
             impulseX = Mathf.MoveTowards(impulseX, 0, 12 * Time.fixedDeltaTime);
@@ -57,6 +70,8 @@ namespace AetherWild
             body.linearVelocity = Vector2.zero;
             body.angularVelocity = 0;
             impulseX = 0;
+            launching=false;
+            launchAge=0;
         }
         public void ApplyKnockback(Vector2 impulse)
         {
@@ -67,7 +82,18 @@ namespace AetherWild
         {
             ClearInput();
             impulseX=0;
+            launching=true;
+            launchAge=0;
+            body.WakeUp();
             body.linearVelocity=velocity;
+        }
+
+        public void EndLaunch(bool stop)
+        {
+            if(!body) return;
+            launching=false;
+            launchAge=0;
+            if(stop) body.linearVelocity=Vector2.zero;
         }
     }
 }
