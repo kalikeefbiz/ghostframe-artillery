@@ -51,6 +51,15 @@ namespace AetherWild
                 for (int i = 0; i < overlapCount; i++)
                     if (Valid(overlaps[i])) { Resolve(overlaps[i], from); return; }
                 Vector2 to = Ballistics.Position(origin, velocity, gravity, nextAge);
+                Vector2 instantaneous=velocity+gravity*nextAge;
+                if(MirrorField.TryRedirect(from,to,ref instantaneous,out var mirrorHit))
+                {
+                    origin=mirrorHit+instantaneous.normalized*.04f;
+                    velocity=instantaneous;
+                    age=0;
+                    transform.position=origin;
+                    continue;
+                }
                 Vector2 delta = to - from;
                 int count = Physics2D.CircleCast(from, definition.collisionRadius, delta.normalized,
                     filter, hits, delta.magnitude);
