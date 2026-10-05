@@ -12,6 +12,7 @@ namespace AetherWild
         private Image menuTitle;
         private ProductionArt art;
         private readonly Image[] sigilSkins=new Image[6];
+        private readonly Image[] sigilIcons=new Image[6];
         private Button fire, rematch;
         private GameObject resultPanel;
         private CanvasGroup matchUI;
@@ -77,6 +78,7 @@ namespace AetherWild
                 var icon=new GameObject("Sigil icon",typeof(RectTransform),typeof(Image)).GetComponent<Image>();
                 icon.transform.SetParent(r,false);icon.raycastTarget=false;icon.preserveAspect=true;
                 icon.sprite=match.Player.Loadout.Get(i).icon;
+                sigilIcons[i]=icon;
                 Place(icon.rectTransform,new Vector2(0,.5f),new Vector2(35,0),new Vector2(56,56));
                 sigilLabels[i]=sigilButtons[i].GetComponentInChildren<Text>();sigilLabels[i].fontSize=16;
                 sigilLabels[i].rectTransform.offsetMin=new Vector2(64,3);
@@ -140,6 +142,7 @@ namespace AetherWild
             for(int i=0;i<6;i++)
             {
                 var s=match.Player.Loadout.Get(i);
+                if(sigilIcons[i]) sigilIcons[i].sprite=s?s.icon:null;
                 bool slotRecall=match.IsRecallReady(Side.Player,i);
                 sigilLabels[i].text=(slotRecall?"RECALL":s.displayName)+"\n"+(slotRecall?"Ready":s.unlimitedUses?"Unlimited":match.Player.Loadout.Uses(i)+" left");
                 sigilButtons[i].interactable=match.PlayerCanAct && match.CanUseSlot(Side.Player,i);
