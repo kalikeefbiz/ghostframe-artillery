@@ -23,7 +23,7 @@ namespace AetherWild
                 var s=match.Player.Loadout.Get(match.SelectedSlot);
                 if(match.IsRecallReady(Side.Player,match.SelectedSlot)) return true;
                 if(s.behavior==SigilBehavior.Mirror)
-                    return Direction.sqrMagnitude>.01f && match.Terrain.AnchorPosition(Target,match.Player,s.targetingRange,out _);
+                    return Direction.sqrMagnitude>.01f && match.Terrain.FreePosition(Target,match.Player,s.targetingRange,out _);
                 if(s.behavior==SigilBehavior.BulwarkRise || s.form==SigilForm.Construct)
                     return match.Terrain.WallPosition(Target,match.Player,s.targetingRange,
                         s.wallSize*match.Player.Bonus(s,"terrain"),out _);
@@ -125,10 +125,10 @@ namespace AetherWild
                 vector.color=valid?new Color(.25f,1,.35f):new Color(1,.2f,.18f);
                 if(sigil.behavior==SigilBehavior.Mirror)
                 {
-                    match.Terrain.AnchorPosition(Target,match.Player,sigil.targetingRange,out var anchor);
+                    match.Terrain.FreePosition(Target,match.Player,sigil.targetingRange,out var anchor);
                     if(!valid) anchor=Target;
                     Vector2 tangent=Direction.sqrMagnitude>.01f?Direction.normalized:Vector2.up;
-                    Vector2 center=anchor+Vector2.up*1.25f;
+                    Vector2 center=anchor;
                     Vector2 normal=new Vector2(-tangent.y,tangent.x)*.08f;
                     var corners=new[]{(Vector3)(center-tangent*1.35f-normal),(Vector3)(center+tangent*1.35f-normal),
                         (Vector3)(center+tangent*1.35f+normal),(Vector3)(center-tangent*1.35f+normal)};
