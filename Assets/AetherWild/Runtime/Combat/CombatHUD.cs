@@ -58,7 +58,7 @@ namespace AetherWild
             match.Impact+=OnImpact;
             match.StateChanged+=OnStateChanged;
             ShowMainMenu();
-            RefreshAll();
+            RefreshLoadout();
         }
 
         private void BuildMatchHUD(RectTransform menuParent,Sprite sprite)
