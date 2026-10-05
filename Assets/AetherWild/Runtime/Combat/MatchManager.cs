@@ -204,9 +204,9 @@ namespace AetherWild
                 projectile = null;
                 var victim = hit ? hit.GetComponentInParent<SummonerCombat>() : null;
                 ResolveEffect(caster,sigil,victim,point);
-                if(sigil.behavior==SigilBehavior.Rootcaller)
+                if(hit && sigil.behavior==SigilBehavior.Rootcaller)
                     Terrain.CreateRootMound(point,sigil.wallSize.x,sigil.wallSize.y);
-                if(sigil.behavior==SigilBehavior.ResoRecall)
+                if(hit && sigil.behavior==SigilBehavior.ResoRecall)
                     SetResoAnchor(side,slot,point,sigil);
                 Impact?.Invoke(point);
                 if (Player.Health.Defeated || Enemy.Health.Defeated)
