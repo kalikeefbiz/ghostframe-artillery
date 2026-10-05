@@ -63,5 +63,11 @@ namespace AetherWild
             impulseX += impulse.x;
             body.linearVelocity += Vector2.up * impulse.y;
         }
+        public void Launch(Vector2 velocity)
+        {
+            ClearInput();
+            impulseX=0;
+            body.linearVelocity=velocity;
+        }
     }
 }
