@@ -65,9 +65,8 @@ namespace AetherWild
                 var swap=equipped[slot];
                 equipped[slot]=sigil;
                 equipped[existing]=swap;
-                int uses=remaining[slot];
-                remaining[slot]=sigil.unlimitedUses?sigil.maxUses:sigil.maxUses;
-                remaining[existing]=swap?(swap.unlimitedUses?swap.maxUses:swap.maxUses):uses;
+                remaining[slot]=sigil.maxUses;
+                remaining[existing]=swap?swap.maxUses:0;
                 return;
             }
             equipped[slot]=sigil;
