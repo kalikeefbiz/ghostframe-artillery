@@ -19,6 +19,13 @@ namespace AetherWild
         private float impactSeconds;
         private readonly Button[] sigilButtons=new Button[6];
         private readonly Text[] sigilLabels=new Text[6];
+        private Button[] libraryButtons;
+        private Text[] libraryLabels;
+        private readonly Button[] equippedButtons=new Button[6];
+        private readonly Text[] equippedLabels=new Text[6];
+        private readonly Image[] equippedSkins=new Image[6];
+        private Text libraryHelp;
+        private int editSlot;
         public AimController Aim => aim;
 
         public void Initialize(RectTransform parent, MatchManager session, Sprite sprite, ProductionArt assets)
@@ -90,6 +97,7 @@ namespace AetherWild
             rematch = Button(panel, "REMATCH", Vector2.one * 0.5f, new Vector2(0, -45), new Vector2(220, 80));
             SkinButton(rematch,art.primaryButton);
             rematch.onClick.AddListener(() => { aim.ResetAim(); if(match.InMenu) match.StartMatch(); else match.Rematch(); });
+            BuildLibrary(panel);
             resultPanel.SetActive(match.InMenu);
             result.text="THE WILDS — DEPTH 1";
             rematch.GetComponentInChildren<Text>().text="PLAY";
@@ -123,27 +131,101 @@ namespace AetherWild
             playerShield.text=$"{match.Player.Health.Shield} Shield";
             enemyShield.text=$"{match.Enemy.Health.Shield} Shield";
             var selected=match.Player.Loadout.Get(match.SelectedSlot);
-            string feedback=selected.usesProjectile?$"Power {Mathf.RoundToInt(aim.Power*100)}%":selected.form==SigilForm.Ward?
+            bool recall=match.IsRecallReady(Side.Player,match.SelectedSlot);
+            bool ballistic=selected.usesProjectile || selected.behavior==SigilBehavior.EmberStep;
+            string feedback=recall?"RECALL READY":ballistic?$"Power {Mathf.RoundToInt(aim.Power*100)}%":selected.form==SigilForm.Ward?
                 "Shield ready":aim.TargetValid?"Valid target":"Tap a valid surface in range";
-            power.text=$"{selected.displayName}  |  {feedback}\nMove {match.MovementLeft:0.0}  |  Resonance {(match.Player.Resonant?"ON":"OFF")}";
-            fire.interactable = match.PlayerCanAct && match.Player.Loadout.Available(match.SelectedSlot) && aim.TargetValid;
+            power.text=$"{(recall?"RECALL":selected.displayName)}  |  {feedback}\nMove {match.MovementLeft:0.0}  |  Resonance {(match.Player.Resonant?"ON":"OFF")}";
+            fire.interactable = match.PlayerCanAct && match.CanUseSlot(Side.Player,match.SelectedSlot) && aim.TargetValid;
             for(int i=0;i<6;i++)
             {
                 var s=match.Player.Loadout.Get(i);
-                sigilLabels[i].text=s.displayName+"\n"+(s.unlimitedUses?"Unlimited":match.Player.Loadout.Uses(i)+" left");
-                sigilButtons[i].interactable=match.PlayerCanAct && match.Player.Loadout.Available(i);
+                bool slotRecall=match.IsRecallReady(Side.Player,i);
+                sigilLabels[i].text=(slotRecall?"RECALL":s.displayName)+"\n"+(slotRecall?"Ready":s.unlimitedUses?"Unlimited":match.Player.Loadout.Uses(i)+" left");
+                sigilButtons[i].interactable=match.PlayerCanAct && match.CanUseSlot(Side.Player,i);
                 sigilSkins[i].sprite=i==match.SelectedSlot?art.sigilSelected:art.sigilSlot;
             }
             bool finished = match.InMenu || match.Turns.Phase == TurnPhase.Finished;
             resultPanel.SetActive(finished);
             menuTitle.gameObject.SetActive(match.InMenu);
+            SetLibraryVisible(match.InMenu);
+            var panel=resultPanel.GetComponent<RectTransform>();
+            panel.sizeDelta=match.InMenu?new Vector2(1040,560):new Vector2(420,240);
             result.text = match.InMenu?"THE WILDS — DEPTH 1":match.Result;
             result.fontSize=match.InMenu?20:38;
-            result.rectTransform.anchoredPosition=new Vector2(0,match.InMenu?12:50);
+            result.rectTransform.anchoredPosition=new Vector2(0,match.InMenu?175:50);
+            menuTitle.rectTransform.anchoredPosition=new Vector2(0,match.InMenu?230:70);
+            menuTitle.rectTransform.sizeDelta=match.InMenu?new Vector2(360,90):new Vector2(360,100);
+            rematch.GetComponent<RectTransform>().anchoredPosition=new Vector2(0,match.InMenu?-225:-45);
             rematch.GetComponentInChildren<Text>().text=match.InMenu?"PLAY":"REMATCH";
+            if(match.InMenu) RefreshLibraryLabels();
             if (impactSeconds > 0) impactSeconds -= Time.deltaTime;
             if (impactSeconds <= 0) impact.enabled = false;
         }
+        private void BuildLibrary(RectTransform panel)
+        {
+            libraryHelp=Label(panel,18);
+            libraryHelp.text="SIGIL LIBRARY — TAP AN EQUIPPED SLOT, THEN CHOOSE A SIGIL";
+            Place(libraryHelp.rectTransform,Vector2.one*.5f,new Vector2(0,135),new Vector2(900,30));
+
+            var library=match.Library;
+            libraryButtons=new Button[library.Length];
+            libraryLabels=new Text[library.Length];
+            for(int i=0;i<library.Length;i++)
+            {
+                int index=i;
+                int col=i%6,row=i/6;
+                var button=Button(panel,"",Vector2.one*.5f,new Vector2(-355+col*142,72-row*76),new Vector2(132,68));
+                SkinButton(button,art.sigilSlot);
+                var icon=new GameObject("Library icon",typeof(RectTransform),typeof(Image)).GetComponent<Image>();
+                icon.transform.SetParent(button.transform,false);
+                icon.sprite=library[i].icon;icon.preserveAspect=true;icon.raycastTarget=false;
+                Place(icon.rectTransform,new Vector2(0,.5f),new Vector2(28,0),new Vector2(46,46));
+                var label=button.GetComponentInChildren<Text>();
+                label.fontSize=13;label.alignment=TextAnchor.MiddleLeft;
+                label.rectTransform.offsetMin=new Vector2(54,4);label.rectTransform.offsetMax=new Vector2(-4,-4);
+                button.onClick.AddListener(()=>{match.EquipPlayerSlot(editSlot,index);RefreshLibraryLabels();});
+                libraryButtons[i]=button;libraryLabels[i]=label;
+            }
+
+            for(int i=0;i<6;i++)
+            {
+                int slot=i;
+                var button=Button(panel,"",Vector2.one*.5f,new Vector2(-355+i*142,-118),new Vector2(132,72));
+                equippedSkins[i]=SkinButton(button,art.sigilSlot);
+                button.onClick.AddListener(()=>{editSlot=slot;RefreshLibraryLabels();});
+                equippedButtons[i]=button;
+                equippedLabels[i]=button.GetComponentInChildren<Text>();
+                equippedLabels[i].fontSize=13;
+            }
+            RefreshLibraryLabels();
+        }
+
+        private void SetLibraryVisible(bool visible)
+        {
+            if(libraryHelp) libraryHelp.gameObject.SetActive(visible);
+            if(libraryButtons!=null) foreach(var button in libraryButtons) if(button) button.gameObject.SetActive(visible);
+            foreach(var button in equippedButtons) if(button) button.gameObject.SetActive(visible);
+        }
+
+        private void RefreshLibraryLabels()
+        {
+            if(libraryButtons==null || !match || !match.Player) return;
+            var library=match.Library;
+            for(int i=0;i<libraryButtons.Length;i++)
+            {
+                var s=library[i];
+                libraryLabels[i].text=s?s.displayName:"";
+                libraryButtons[i].interactable=s;
+            }
+            for(int i=0;i<equippedButtons.Length;i++)
+            {
+                var s=match.Player.Loadout.Get(i);
+                equippedLabels[i].text=$"{i+1}\n{(s?s.displayName:"EMPTY")}";
+                equippedSkins[i].sprite=i==editSlot?art.sigilSelected:art.sigilSlot;
+            }
+        }
+
         private void SetMenuVisibility()
         {
             matchUI.alpha=match.InMenu?0:1;
