@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
+  m_Name: ResoRecall
+  m_EditorClassIdentifier:
+  id: starter.resorecall
+  displayName: Reso Recall
+  school: 4
+  form: 0
+  classAffinity: 1
+  behavior: 3
+  maxUses: 2
+  unlimitedUses: 0
+  usesProjectile: 1
+  projectileSpeed: 22
+  gravityScale: 1
+  launchPowerMin: 0.25
+  launchPowerMax: 1
+  collisionRadius: 0.14
+  baseDamage: 12
+  secondaryDamage: 18
+  splashRadius: 0
+  damageFalloff: 0
+  knockbackForce: 1.2
+  terrainDamageRadius: 0.35
+  createsTerrain: 0
+  destroysTerrain: 1
+  shieldAmount: 0
+  displacementDistance: 0
+  persistentTurns: 2
+  targetingRange: 0
+  wallSize: {x: 1.5, y: 2.5}
+  resonanceEligible: 1
+  resonanceModifiedStat: damage
+  resonanceBonusPercent: 5
+  icon: {fileID: 21300000, guid: d3000000000000000000000000000004, type: 3}
+  projectileVFX: {fileID: 0}
+  impactVFX: {fileID: 0}
+  sfx: {fileID: 0}
