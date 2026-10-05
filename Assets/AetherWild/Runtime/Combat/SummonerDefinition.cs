@@ -10,5 +10,6 @@ namespace AetherWild
         public SummonerClass summonerClass;
         public int startingHP = 100;
         public SigilDefinition[] startingLoadout;
+        public SigilDefinition[] sigilLibrary;
     }
 }
