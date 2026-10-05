@@ -9,6 +9,7 @@ namespace AetherWild
         private Vector2 a,b;
         private int expireTurn;
         private LineRenderer line;
+        private SpriteRenderer artRenderer;
         private Sprite redirectSprite;
 
         public static MirrorField Create(Vector2 anchor,Vector2 facing,int currentTurn,int durationTurns,
@@ -17,27 +18,32 @@ namespace AetherWild
             var go=new GameObject("Mirror Sigil",typeof(LineRenderer),typeof(MirrorField));
             var field=go.GetComponent<MirrorField>();
             Vector2 tangent=facing.sqrMagnitude>.01f?facing.normalized:Vector2.up;
-            Vector2 center=anchor+Vector2.up*1.25f;
+            Vector2 center=anchor;
             field.a=center-tangent*1.35f;
             field.b=center+tangent*1.35f;
             field.expireTurn=currentTurn+Mathf.Max(2,durationTurns*2);
             field.redirectSprite=redirect;
+            go.transform.position=center;
             if(placedSprite)
             {
-                var placed=go.AddComponent<SpriteRenderer>();
-                placed.sprite=placedSprite;placed.color=Color.white;placed.sortingOrder=6;
-                go.transform.position=center;
+                var artObject=new GameObject("Mirror artwork",typeof(SpriteRenderer));
+                artObject.transform.SetParent(go.transform,false);
+                field.artRenderer=artObject.GetComponent<SpriteRenderer>();
+                field.artRenderer.sprite=placedSprite;
+                field.artRenderer.color=Color.white;
+                field.artRenderer.sortingOrder=7;
                 float angle=Mathf.Atan2(tangent.y,tangent.x)*Mathf.Rad2Deg-90;
-                go.transform.rotation=Quaternion.Euler(0,0,angle);
-                SigilPresentation.Fit(go.transform,placedSprite,2.7f);
+                artObject.transform.rotation=Quaternion.Euler(0,0,angle);
+                SigilPresentation.Fit(artObject.transform,placedSprite,2.8f);
             }
             field.line=go.GetComponent<LineRenderer>();
             field.line.positionCount=2;
             field.line.SetPositions(new[]{(Vector3)field.a,(Vector3)field.b});
             field.line.startWidth=field.line.endWidth=.09f;
-            field.line.startColor=field.line.endColor=placedSprite?new Color(.55f,.9f,1,.18f):new Color(.55f,.9f,1,1);
+            field.line.startColor=field.line.endColor=new Color(.55f,.9f,1,1);
             field.line.material=new Material(Shader.Find("Sprites/Default"));
             field.line.sortingOrder=5;
+            field.line.enabled=!placedSprite;
             active.Add(field);
             return field;
         }
