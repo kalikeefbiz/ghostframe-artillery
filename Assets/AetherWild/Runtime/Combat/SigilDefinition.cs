@@ -17,6 +17,7 @@ namespace AetherWild
         public bool unlimitedUses;
         [Header("Projectile")]
         public bool usesProjectile;
+        public ProjectileMotion projectileMotion = ProjectileMotion.Impact;
         public float projectileSpeed = 20;
         public float gravityScale = 1;
         public float launchPowerMin = 0.25f;
