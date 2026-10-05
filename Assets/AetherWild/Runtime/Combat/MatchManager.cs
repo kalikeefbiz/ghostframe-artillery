@@ -58,15 +58,17 @@ namespace AetherWild
         private BattlefieldDefinition battlefield;
         private ProjectileController projectile;
         private Sprite projectileSprite;
+        private ProductionArt art;
         private int generation;
         private float aiWait;
 
-        public void Initialize(SummonerCombat player, SummonerCombat enemy, BattlefieldDefinition map, Sprite sprite)
+        public void Initialize(SummonerCombat player, SummonerCombat enemy, BattlefieldDefinition map, Sprite sprite, ProductionArt presentation)
         {
             Player = player;
             Enemy = enemy;
             battlefield = map;
             projectileSprite = sprite;
+            art = presentation;
             Terrain = FindFirstObjectByType<TerrainSystem>();
             Terrain.Changed += OnTerrainChanged;
             Turns.Changed += OnTurnChanged;
@@ -169,12 +171,19 @@ namespace AetherWild
             if(!sigil.usesProjectile)
             {
                 if(sigil.behavior==SigilBehavior.Mirror)
-                    MirrorField.Create(validTarget,direction,Turns.TurnNumber,Mathf.Max(1,sigil.persistentTurns));
+                    MirrorField.Create(validTarget,direction,Turns.TurnNumber,Mathf.Max(1,sigil.persistentTurns),
+                        art?art.mirrorPlaced:null,art?art.mirrorRedirect:null);
                 else if(sigil.behavior==SigilBehavior.BulwarkRise)
+                {
+                    if(art) SigilPresentation.Burst(art.bulwarkRiseEruption,validTarget+Vector2.up*.9f,4.6f,.32f);
                     Terrain.CreateBulwarks(validTarget,wallSize);
+                }
                 else if(sigil.behavior==SigilBehavior.EmberStep)
                 {
-                    caster.gameObject.AddComponent<EmberStepImpact>().Initialize(caster,opponent,Terrain,sigil);
+                    if(art) SigilPresentation.Burst(art.emberStepLaunch,caster.transform.position,3.2f,.28f,
+                        Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg);
+                    caster.gameObject.AddComponent<EmberStepImpact>().Initialize(caster,opponent,Terrain,sigil,
+                        art?art.emberStepImpact:null);
                     caster.Movement.Launch(direction.normalized*sigil.Speed(power));
                 }
                 else if(sigil.form == SigilForm.Ward)
@@ -188,14 +197,16 @@ namespace AetherWild
             int castGeneration = generation;
             var go = new GameObject("Sigil projectile", typeof(SpriteRenderer), typeof(ProjectileController));
             var visual = go.GetComponent<SpriteRenderer>();
-            visual.sprite = sigil.icon ? sigil.icon : projectileSprite;
+            Sprite shotSprite=sigil.icon;
+            float shotSize=.72f;
+            if(art && sigil.behavior==SigilBehavior.Rootcaller && art.rootCallerProjectile)
+            { shotSprite=art.rootCallerProjectile; shotSize=.9f; }
+            else if(art && sigil.behavior==SigilBehavior.ResoRecall && art.resoBladeProjectile)
+            { shotSprite=art.resoBladeProjectile; shotSize=1.05f; }
+            visual.sprite = shotSprite ? shotSprite : projectileSprite;
             visual.color = Color.white;
             visual.sortingOrder = 5;
-            if(sigil.icon)
-            {
-                float longest=Mathf.Max(.01f,Mathf.Max(sigil.icon.bounds.size.x,sigil.icon.bounds.size.y));
-                go.transform.localScale=Vector3.one*(.72f/longest);
-            }
+            if(visual.sprite) SigilPresentation.Fit(go.transform,visual.sprite,shotSize);
             else go.transform.localScale = Vector3.one * sigil.collisionRadius * 2;
             projectile = go.GetComponent<ProjectileController>();
             projectile.Initialize(caster, sigil, direction, power, (hit, point) =>
@@ -205,7 +216,10 @@ namespace AetherWild
                 var victim = hit ? hit.GetComponentInParent<SummonerCombat>() : null;
                 ResolveEffect(caster,sigil,victim,point);
                 if(hit && sigil.behavior==SigilBehavior.Rootcaller)
+                {
+                    if(art) SigilPresentation.Burst(art.rootCallerEruption,point+Vector2.up*.75f,4.2f,.34f);
                     Terrain.CreateRootMound(point,sigil.wallSize.x,sigil.wallSize.y);
+                }
                 if(hit && sigil.behavior==SigilBehavior.ResoRecall)
                     SetResoAnchor(side,slot,point,sigil);
                 Impact?.Invoke(point);
@@ -297,7 +311,8 @@ namespace AetherWild
             var existing=side==Side.Player?playerReso:enemyReso;
             if(existing) Destroy(existing.gameObject);
             var caster=side==Side.Player?Player:Enemy;
-            var anchor=ResoAnchor.Create(caster,slot,point,Turns.TurnNumber+Mathf.Max(2,sigil.persistentTurns*2),sigil.icon);
+            var anchor=ResoAnchor.Create(caster,slot,point,Turns.TurnNumber+Mathf.Max(2,sigil.persistentTurns*2),
+                art&&art.resoBladePlaced?art.resoBladePlaced:sigil.icon);
             if(side==Side.Player) playerReso=anchor; else enemyReso=anchor;
         }
         private void RecallReso(Side side,SigilDefinition sigil)
@@ -319,13 +334,18 @@ namespace AetherWild
                     opponent.Health.Damage(Mathf.Max(0,sigil.secondaryDamage));
                     opponent.Movement.ApplyKnockback((end-start).normalized*2.2f+Vector2.up*.35f);
                 }
-                var line=new GameObject("Reso recall path",typeof(LineRenderer)).GetComponent<LineRenderer>();
-                line.positionCount=2;line.SetPositions(new[]{(Vector3)start,(Vector3)end});
-                line.startWidth=line.endWidth=.11f;
-                line.startColor=line.endColor=new Color(.4f,.9f,1,1);
-                line.material=new Material(Shader.Find("Sprites/Default"));
-                line.sortingOrder=7;
-                Destroy(line.gameObject,.22f);
+                if(art && art.resoBladeRecall)
+                    SigilPresentation.Travel(art.resoBladeRecall,start,end,1.15f,.28f);
+                else
+                {
+                    var line=new GameObject("Reso recall path",typeof(LineRenderer)).GetComponent<LineRenderer>();
+                    line.positionCount=2;line.SetPositions(new[]{(Vector3)start,(Vector3)end});
+                    line.startWidth=line.endWidth=.11f;
+                    line.startColor=line.endColor=new Color(.4f,.9f,1,1);
+                    line.material=new Material(Shader.Find("Sprites/Default"));
+                    line.sortingOrder=7;
+                    Destroy(line.gameObject,.22f);
+                }
             }
             Destroy(anchor.gameObject);
             if(side==Side.Player) playerReso=null; else enemyReso=null;
