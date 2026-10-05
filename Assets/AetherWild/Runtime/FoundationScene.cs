@@ -62,7 +62,7 @@ namespace AetherWild
             playerCombat.Initialize(Side.Player, mae);
             enemyCombat.Initialize(Side.Enemy, mae);
             match = gameObject.AddComponent<MatchManager>();
-            match.Initialize(playerCombat, enemyCombat, battlefield, placeholder);
+            match.Initialize(playerCombat, enemyCombat, battlefield, placeholder, productionArt);
             player.gameObject.AddComponent<MaePresentation>().Initialize(playerCombat,match,productionArt,
                 player.GetComponentInChildren<SpriteRenderer>());
             enemy.gameObject.AddComponent<MaePresentation>().Initialize(enemyCombat,match,productionArt,
