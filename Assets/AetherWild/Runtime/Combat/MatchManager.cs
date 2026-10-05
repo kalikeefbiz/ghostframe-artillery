@@ -84,6 +84,7 @@ namespace AetherWild
             MovementLeft-=.8f; return true;
         }
         public void StartMatch() { InMenu=false; Rematch(); }
+        public void ReturnToMenu() { InMenu=true; Rematch(); }
         public event Action StateChanged;
         public event Action<Vector2> Impact;
         public event Action<SummonerCombat,Vector2> SigilCast;
