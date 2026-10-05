@@ -21,6 +21,7 @@ namespace AetherWild
         private bool pendingResolution;
         private System.Random aiRandom = new System.Random(1729);
         private ResoAnchor playerReso,enemyReso;
+        private const string LoadoutKeyPrefix="AetherWild.Loadout.";
         public SigilDefinition[] Library => Player && Player.Definition.sigilLibrary!=null
             ? Player.Definition.sigilLibrary : System.Array.Empty<SigilDefinition>();
         public void Select(int slot)
@@ -31,10 +32,41 @@ namespace AetherWild
         {
             if(!InMenu || slot<0 || slot>=Player.Loadout.Count || libraryIndex<0 || libraryIndex>=Library.Length) return false;
             Player.EquipSlot(slot,Library[libraryIndex]);
+            SavePlayerLoadout();
             SelectedSlot=Mathf.Clamp(SelectedSlot,0,Player.Loadout.Count-1);
             StateChanged?.Invoke();
             return true;
         }
+        private void LoadSavedPlayerLoadout()
+        {
+            if(!Player || Player.Loadout==null) return;
+            for(int slot=0;slot<Player.Loadout.Count;slot++)
+            {
+                string id=PlayerPrefs.GetString(LoadoutKeyPrefix+slot,"");
+                if(string.IsNullOrEmpty(id)) continue;
+                for(int i=0;i<Library.Length;i++)
+                {
+                    var sigil=Library[i];
+                    if(sigil && sigil.id==id)
+                    {
+                        Player.EquipSlot(slot,sigil);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void SavePlayerLoadout()
+        {
+            if(!Player || Player.Loadout==null) return;
+            for(int slot=0;slot<Player.Loadout.Count;slot++)
+            {
+                var sigil=Player.Loadout.Get(slot);
+                if(sigil) PlayerPrefs.SetString(LoadoutKeyPrefix+slot,sigil.id);
+            }
+            PlayerPrefs.Save();
+        }
+
         public bool IsRecallReady(Side side,int slot)
         {
             var caster=side==Side.Player?Player:Enemy;
@@ -69,6 +101,7 @@ namespace AetherWild
             battlefield = map;
             projectileSprite = sprite;
             art = presentation;
+            LoadSavedPlayerLoadout();
             Terrain = FindFirstObjectByType<TerrainSystem>();
             Terrain.Changed += OnTerrainChanged;
             Turns.Changed += OnTurnChanged;
