@@ -6,7 +6,8 @@ namespace AetherWild
     public enum TurnPhase { Acting, Resolving, Finished }
     public enum SummonerClass { Embodiment, Conduit, Shaper, Manipulator, Expellant, Specialist }
     public enum SigilSchool { Origin, Aerth, Ash, Aurora, Tempest, Lunar, XO, Seeker }
-    public enum SigilForm { Projectile, Bomb, Construct, Shift, Ward, TerrainManipulation }
+    public enum SigilForm { Projectile, Bomb, Construct, Shift, Ward, TerrainManipulation, Field, DelayedEffect }
+    public enum SigilBehavior { Standard, Mirror, Rootcaller, ResoRecall, BulwarkRise, EmberStep }
 
     public sealed class HealthState
     {
