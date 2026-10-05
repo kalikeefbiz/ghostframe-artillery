@@ -9,12 +9,14 @@ namespace AetherWild
         private SummonerCombat owner,opponent;
         private TerrainSystem terrain;
         private SigilDefinition sigil;
+        private Sprite impactSprite;
         private float age;
         private bool hitOpponent,hitTerrain;
 
-        public void Initialize(SummonerCombat caster,SummonerCombat enemy,TerrainSystem map,SigilDefinition definition)
+        public void Initialize(SummonerCombat caster,SummonerCombat enemy,TerrainSystem map,SigilDefinition definition,
+            Sprite presentation)
         {
-            owner=caster;opponent=enemy;terrain=map;sigil=definition;
+            owner=caster;opponent=enemy;terrain=map;sigil=definition;impactSprite=presentation;
             Destroy(this,3f);
         }
 
@@ -34,7 +36,9 @@ namespace AetherWild
             if(!hitTerrain && collision.collider.GetComponent<Tilemap>() && collision.contactCount>0)
             {
                 hitTerrain=true;
-                terrain.DestroyCircle(collision.GetContact(0).point,Mathf.Max(.35f,sigil.terrainDamageRadius));
+                Vector2 point=collision.GetContact(0).point;
+                if(impactSprite) SigilPresentation.Burst(impactSprite,point+Vector2.up*.35f,3.2f,.28f);
+                terrain.DestroyCircle(point,Mathf.Max(.35f,sigil.terrainDamageRadius));
             }
             if(hitTerrain) Destroy(this);
         }
