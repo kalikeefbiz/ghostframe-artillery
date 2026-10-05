@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace AetherWild
@@ -5,6 +6,7 @@ namespace AetherWild
     // Presentation-only helpers. Combat/terrain rules remain authoritative elsewhere.
     public static class SigilPresentation
     {
+        private static readonly List<GameObject> persistent=new List<GameObject>();
         public static SpriteRenderer Spawn(Sprite sprite,Vector2 point,float worldSize,int order=7,float rotation=0)
         {
             if(!sprite) return null;
@@ -23,6 +25,19 @@ namespace AetherWild
         {
             var renderer=Spawn(sprite,point,worldSize,8,rotation);
             if(renderer) Object.Destroy(renderer.gameObject,Mathf.Max(.05f,lifetime));
+        }
+
+        public static SpriteRenderer Persistent(Sprite sprite,Vector2 point,float worldSize,int order=6,float rotation=0)
+        {
+            var renderer=Spawn(sprite,point,worldSize,order,rotation);
+            if(renderer) persistent.Add(renderer.gameObject);
+            return renderer;
+        }
+
+        public static void ClearPersistent()
+        {
+            for(int i=persistent.Count-1;i>=0;i--) if(persistent[i]) Object.Destroy(persistent[i]);
+            persistent.Clear();
         }
 
         public static void Travel(Sprite sprite,Vector2 from,Vector2 to,float worldSize,float duration)
