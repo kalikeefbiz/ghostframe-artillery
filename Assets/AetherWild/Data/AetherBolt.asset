@@ -20,6 +20,7 @@ MonoBehaviour:
   maxUses: 0
   unlimitedUses: 1
   usesProjectile: 1
+  projectileMotion: 1
   projectileSpeed: 20
   gravityScale: 1
   launchPowerMin: 0.25
