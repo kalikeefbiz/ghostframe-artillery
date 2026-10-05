@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3931519f9925bbe87c4bee4c9de1c70, type: 3}
   m_Name: RootCaller
   m_EditorClassIdentifier:
-  id: starter.rootcaller
-  displayName: Root Caller
+  id: m3.rootcaller
+  displayName: Rootcaller
   school: 3
   form: 0
   classAffinity: 2
