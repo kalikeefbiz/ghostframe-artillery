@@ -77,11 +77,14 @@ namespace AetherWild
                     transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(instantaneous.y,instantaneous.x)*Mathf.Rad2Deg);
                 if(MirrorField.TryRedirect(from,to,ref instantaneous,out var mirrorHit))
                 {
-                    origin=mirrorHit+instantaneous.normalized*.04f;
+                    origin=mirrorHit+instantaneous.normalized*.08f;
                     velocity=instantaneous;
                     age=0;
                     transform.position=origin;
-                    continue;
+                    // Do not keep simulating against the pre-reflection time window.
+                    // Continuing this loop could advance most of the reflected path invisibly
+                    // in a single FixedUpdate, making the Mirror look like it absorbed the shot.
+                    return;
                 }
                 Vector2 delta = to - from;
                 int count = Physics2D.CircleCast(from, definition.collisionRadius, delta.normalized,
