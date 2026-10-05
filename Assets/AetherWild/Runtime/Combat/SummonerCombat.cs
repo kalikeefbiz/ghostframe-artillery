@@ -29,6 +29,7 @@ namespace AetherWild
             Loadout.Reset();
             Movement.ResetPosition(position);
         }
+        public void EquipSlot(int slot,SigilDefinition sigil) => Loadout.Equip(slot,sigil);
     }
 
     public sealed class SigilLoadout
@@ -50,6 +51,28 @@ namespace AetherWild
             Reset();
         }
         public SigilDefinition Get(int slot) => slot >= 0 && slot < equipped.Length ? equipped[slot] : null;
+        public int IndexOf(SigilDefinition sigil)
+        {
+            for(int i=0;i<equipped.Length;i++) if(equipped[i]==sigil) return i;
+            return -1;
+        }
+        public void Equip(int slot,SigilDefinition sigil)
+        {
+            if(slot<0 || slot>=equipped.Length || !sigil) return;
+            int existing=IndexOf(sigil);
+            if(existing>=0 && existing!=slot)
+            {
+                var swap=equipped[slot];
+                equipped[slot]=sigil;
+                equipped[existing]=swap;
+                int uses=remaining[slot];
+                remaining[slot]=sigil.unlimitedUses?sigil.maxUses:sigil.maxUses;
+                remaining[existing]=swap?(swap.unlimitedUses?swap.maxUses:swap.maxUses):uses;
+                return;
+            }
+            equipped[slot]=sigil;
+            remaining[slot]=sigil.maxUses;
+        }
         public bool Available(int slot) => Get(slot) && (Get(slot).unlimitedUses || remaining[slot] > 0);
         public bool Spend(int slot)
         {
