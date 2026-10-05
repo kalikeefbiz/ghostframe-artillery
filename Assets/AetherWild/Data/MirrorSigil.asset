@@ -37,7 +37,7 @@ MonoBehaviour:
   shieldAmount: 0
   displacementDistance: 0
   persistentTurns: 2
-  targetingRange: 7
+  targetingRange: 999
   wallSize: {x: 1.5, y: 2.5}
   resonanceEligible: 1
   resonanceModifiedStat: movement
