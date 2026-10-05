@@ -27,26 +27,31 @@ CLOUDFLARE_PAGES_PROJECT="${CLOUDFLARE_PAGES_PROJECT:-aetherwild}"
 
 echo "[AetherWild] Environment validation complete."
 
-# Do not source the builder's general shell profile under 'set -u'.
-# Some Unity build images reference optional variables in .profile and can
-# terminate the post-build shell before Wrangler is reached.
-# If Node is not already on PATH, load NVM directly with nounset temporarily disabled.
-if ! command -v npx >/dev/null 2>&1; then
-  NVM_SCRIPT=""
-  if [[ -n "${NVM_DIR:-}" && -f "${NVM_DIR}/nvm.sh" ]]; then
-    NVM_SCRIPT="${NVM_DIR}/nvm.sh"
-  elif [[ -f "$HOME/.nvm/nvm.sh" ]]; then
-    NVM_SCRIPT="$HOME/.nvm/nvm.sh"
-  fi
-
-  if [[ -n "$NVM_SCRIPT" ]]; then
-    echo "[AetherWild] npx not initially on PATH; loading NVM directly..."
-    set +u
-    # shellcheck disable=SC1090
-    source "$NVM_SCRIPT"
-    set -u
-  fi
+# Wrangler 4 requires Node 22+. Unity's Windows image currently exposes an older
+# system Node, so use Unity Build Automation's NVM installation explicitly.
+NVM_SCRIPT=""
+if [[ -n "${NVM_DIR:-}" && -f "${NVM_DIR}/nvm.sh" ]]; then
+  NVM_SCRIPT="${NVM_DIR}/nvm.sh"
+elif [[ -f "$HOME/.nvm/nvm.sh" ]]; then
+  NVM_SCRIPT="$HOME/.nvm/nvm.sh"
 fi
+
+if [[ -z "$NVM_SCRIPT" ]]; then
+  echo "ERROR: NVM is required to select Node 22 for Wrangler, but nvm.sh was not found."
+  exit 1
+fi
+
+echo "[AetherWild] Loading NVM..."
+set +u
+# shellcheck disable=SC1090
+source "$NVM_SCRIPT"
+nvm install 22
+nvm use 22
+set -u
+
+echo "[AetherWild] node: $(node --version)"
+echo "[AetherWild] npm: $(npm --version)"
+echo "[AetherWild] npx: $(command -v npx)"
 
 PLAYER_PATH="$UNITY_PLAYER_PATH"
 # Unity Build Automation runs these hooks as bash even on Windows builders.
@@ -103,13 +108,8 @@ cat > "$UNITY_PLAYER_PATH/_headers" <<'EOF'
 EOF
 
 if ! command -v npx >/dev/null 2>&1; then
-  echo "ERROR: npx is required for Wrangler but is not available on this build image."
+  echo "ERROR: npx is required for Wrangler but is not available after selecting Node 22."
   exit 1
-fi
-
-echo "[AetherWild] npx: $(command -v npx)"
-if command -v node >/dev/null 2>&1; then
-  echo "[AetherWild] node: $(node --version)"
 fi
 
 echo "[AetherWild] Deploying WebGL output to Cloudflare Pages..."
