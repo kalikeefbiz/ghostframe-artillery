@@ -8,6 +8,7 @@ namespace AetherWild
     public enum SigilSchool { Origin, Aerth, Ash, Aurora, Tempest, Lunar, XO, Seeker }
     public enum SigilForm { Projectile, Bomb, Construct, Shift, Ward, TerrainManipulation, Field, DelayedEffect }
     public enum SigilBehavior { Standard, Mirror, Rootcaller, ResoRecall, BulwarkRise, EmberStep }
+    public enum ProjectileMotion { Impact, Arrow, RollingBomb }
 
     public sealed class HealthState
     {
