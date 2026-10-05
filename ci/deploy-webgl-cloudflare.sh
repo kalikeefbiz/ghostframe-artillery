@@ -25,11 +25,27 @@ fi
 
 CLOUDFLARE_PAGES_PROJECT="${CLOUDFLARE_PAGES_PROJECT:-aetherwild}"
 
-# Unity Build Automation documents NVM as available on build machines.
-# Source the profile so node/npm installed by the image are on PATH.
-if [[ -f "$HOME/.profile" ]]; then
-  # shellcheck disable=SC1090
-  source "$HOME/.profile" || true
+echo "[AetherWild] Environment validation complete."
+
+# Do not source the builder's general shell profile under 'set -u'.
+# Some Unity build images reference optional variables in .profile and can
+# terminate the post-build shell before Wrangler is reached.
+# If Node is not already on PATH, load NVM directly with nounset temporarily disabled.
+if ! command -v npx >/dev/null 2>&1; then
+  NVM_SCRIPT=""
+  if [[ -n "${NVM_DIR:-}" && -f "${NVM_DIR}/nvm.sh" ]]; then
+    NVM_SCRIPT="${NVM_DIR}/nvm.sh"
+  elif [[ -f "$HOME/.nvm/nvm.sh" ]]; then
+    NVM_SCRIPT="$HOME/.nvm/nvm.sh"
+  fi
+
+  if [[ -n "$NVM_SCRIPT" ]]; then
+    echo "[AetherWild] npx not initially on PATH; loading NVM directly..."
+    set +u
+    # shellcheck disable=SC1090
+    source "$NVM_SCRIPT"
+    set -u
+  fi
 fi
 
 PLAYER_PATH="$UNITY_PLAYER_PATH"
@@ -86,9 +102,14 @@ cat > "$UNITY_PLAYER_PATH/_headers" <<'EOF'
   X-Content-Type-Options: nosniff
 EOF
 
-if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-  echo "ERROR: Node.js/npm are required for Wrangler but are not available on this build image."
+if ! command -v npx >/dev/null 2>&1; then
+  echo "ERROR: npx is required for Wrangler but is not available on this build image."
   exit 1
+fi
+
+echo "[AetherWild] npx: $(command -v npx)"
+if command -v node >/dev/null 2>&1; then
+  echo "[AetherWild] node: $(node --version)"
 fi
 
 echo "[AetherWild] Deploying WebGL output to Cloudflare Pages..."
