@@ -10,6 +10,7 @@ namespace AetherWild
         public Sprite maeIdle, maeWalkA, maeWalkB, maeCast, maeHit, maeDefeat;
         public Sprite healthFrame, shieldFrame, hudPanel, primaryButton, secondaryButton;
         public Sprite sigilSlot, sigilSelected, title;
+        public Sprite schoolOrigin, schoolAerth, schoolAsh, schoolAurora, schoolTempest, schoolLunar, schoolXO, schoolSeeker;
         public Sprite mirrorPlaced, mirrorRedirect;
         public Sprite rootCallerProjectile, rootCallerEruption;
         public Sprite resoBladeProjectile, resoBladePlaced, resoBladeRecall;
