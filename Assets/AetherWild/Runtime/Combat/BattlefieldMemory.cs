@@ -9,8 +9,10 @@ namespace AetherWild
         private Vector2 a,b;
         private int expireTurn;
         private LineRenderer line;
+        private Sprite redirectSprite;
 
-        public static MirrorField Create(Vector2 anchor,Vector2 facing,int currentTurn,int durationTurns)
+        public static MirrorField Create(Vector2 anchor,Vector2 facing,int currentTurn,int durationTurns,
+            Sprite placedSprite,Sprite redirect)
         {
             var go=new GameObject("Mirror Sigil",typeof(LineRenderer),typeof(MirrorField));
             var field=go.GetComponent<MirrorField>();
@@ -19,13 +21,23 @@ namespace AetherWild
             field.a=center-tangent*1.35f;
             field.b=center+tangent*1.35f;
             field.expireTurn=currentTurn+Mathf.Max(2,durationTurns*2);
+            field.redirectSprite=redirect;
+            if(placedSprite)
+            {
+                var placed=go.AddComponent<SpriteRenderer>();
+                placed.sprite=placedSprite;placed.color=Color.white;placed.sortingOrder=6;
+                go.transform.position=center;
+                float angle=Mathf.Atan2(tangent.y,tangent.x)*Mathf.Rad2Deg-90;
+                go.transform.rotation=Quaternion.Euler(0,0,angle);
+                SigilPresentation.Fit(go.transform,placedSprite,2.7f);
+            }
             field.line=go.GetComponent<LineRenderer>();
             field.line.positionCount=2;
             field.line.SetPositions(new[]{(Vector3)field.a,(Vector3)field.b});
             field.line.startWidth=field.line.endWidth=.09f;
-            field.line.startColor=field.line.endColor=new Color(.55f,.9f,1,1);
+            field.line.startColor=field.line.endColor=placedSprite?new Color(.55f,.9f,1,.18f):new Color(.55f,.9f,1,1);
             field.line.material=new Material(Shader.Find("Sprites/Default"));
-            field.line.sortingOrder=6;
+            field.line.sortingOrder=5;
             active.Add(field);
             return field;
         }
@@ -42,6 +54,8 @@ namespace AetherWild
                 Vector2 normal=new Vector2(-tangent.y,tangent.x);
                 if(Vector2.Dot(instantaneousVelocity,normal)>0) normal=-normal;
                 instantaneousVelocity=Vector2.Reflect(instantaneousVelocity,normal);
+                if(field.redirectSprite) SigilPresentation.Burst(field.redirectSprite,intersection,2.1f,.2f,
+                    Mathf.Atan2(instantaneousVelocity.y,instantaneousVelocity.x)*Mathf.Rad2Deg);
                 field.Consume();
                 return true;
             }
@@ -108,7 +122,7 @@ namespace AetherWild
             renderer.sprite=sprite;
             renderer.sortingOrder=6;
             renderer.color=Color.white;
-            go.transform.localScale=Vector3.one*.38f;
+            SigilPresentation.Fit(go.transform,sprite,1.25f);
             return anchor;
         }
     }
