@@ -1,0 +1,14 @@
+/Build/*.wasm
+  Content-Type: application/wasm
+
+/Build/*.js
+  Content-Type: application/javascript
+
+/Build/*.data
+  Content-Type: application/octet-stream
+
+/Build/*.json
+  Content-Type: application/json
+
+/*
+  X-Content-Type-Options: nosniff
