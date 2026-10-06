@@ -1,0 +1,107 @@
+name: Materialize Unity Build 13
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/materialize-unity-build13.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Build 13 artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHARE_ID="1ucLm-lT0ZRLgROXQNCZvqv4CH1xo6W7PDsbow1O4nw"
+          API="https://build-automation.services.api.unity.com/v2/shares/$SHARE_ID"
+          curl -fsSL --retry 3 "$API" -o /tmp/share.json
+          URL="$(jq -r '([.links.artifacts[]? | select(.primary == true) | .files[0].href][0] // .links.download_primary.href // empty)' /tmp/share.json)"
+          if [ -z "$URL" ]; then
+            echo "Unity share metadata did not expose a primary artifact URL." >&2
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download existing Unity artifact
+        shell: bash
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.url }}
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-all-errors "$ARTIFACT_URL" -o /tmp/aetherwild-build13.zip
+          ls -lh /tmp/aetherwild-build13.zip
+          unzip -l /tmp/aetherwild-build13.zip | tail -n 30
+
+      - name: Extract WebGL build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/aetherwild-build13
+          mkdir -p /tmp/aetherwild-build13
+          unzip -q /tmp/aetherwild-build13.zip -d /tmp/aetherwild-build13
+
+          INDEX="$(find /tmp/aetherwild-build13 -type f -name index.html -print -quit)"
+          if [ -z "$INDEX" ]; then
+            echo "No index.html found in Unity artifact." >&2
+            exit 1
+          fi
+
+          ROOT="$(dirname "$INDEX")"
+          echo "WebGL root: $ROOT"
+
+          rm -rf cloudflare-placeholder
+          mkdir -p cloudflare-placeholder
+          cp -a "$ROOT"/. cloudflare-placeholder/
+
+          rm -f cloudflare-placeholder/_worker.js
+
+          cat > cloudflare-placeholder/_headers <<'EOF'
+          /Build/*.wasm
+            Content-Type: application/wasm
+
+          /Build/*.js
+            Content-Type: application/javascript
+
+          /Build/*.data
+            Content-Type: application/octet-stream
+
+          /Build/*.json
+            Content-Type: application/json
+
+          /*
+            X-Content-Type-Options: nosniff
+          EOF
+
+          find cloudflare-placeholder -type f -printf '%s %p\n' | sort -n | tail -n 30
+          MAX="$(find cloudflare-placeholder -type f -printf '%s\n' | sort -n | tail -n 1)"
+          if [ "$MAX" -gt 100000000 ]; then
+            echo "A WebGL file exceeds GitHub's 100 MB hard file limit: $MAX bytes" >&2
+            exit 2
+          fi
+
+      - name: Commit hosted Build 13
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A cloudflare-placeholder
+          if git diff --cached --quiet; then
+            echo "Build 13 is already materialized."
+            exit 0
+          fi
+          git commit -m "Materialize AetherWild Unity Build 13 for static hosting"
+          git push origin HEAD:main
